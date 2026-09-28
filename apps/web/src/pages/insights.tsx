@@ -79,7 +79,7 @@ export function InsightsPage() {
                 <p className="text-sm text-muted-foreground">Used {favorite.useCount} times in the last 30 days.</p>
               </div>
               {favorite.pinned ? (
-                <span className="rounded-full border-2 border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+                <span className="rounded-full border border-amber-300/70 bg-amber-50/80 px-2 py-1 text-xs font-semibold text-amber-950 backdrop-blur-sm dark:border-amber-700/70 dark:bg-amber-950/70 dark:text-amber-100">
                   Pinned
                 </span>
               ) : null}

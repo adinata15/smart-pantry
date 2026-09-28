@@ -128,10 +128,10 @@ export function FridgePage() {
             type="button"
             aria-pressed={location === entry.id}
             className={cn(
-              "min-h-11 cursor-pointer rounded-2xl border-[3px] px-4 text-sm font-semibold transition-colors duration-200",
+              "min-h-11 cursor-pointer rounded-2xl border px-4 text-sm font-semibold transition-colors duration-200",
               location === entry.id
-                ? "border-transparent bg-primary text-on-primary shadow-clay"
-                : "border-border bg-card hover:bg-highlight",
+                ? "border-transparent bg-primary text-on-primary shadow-glass-soft"
+                : "glass hover:bg-highlight",
             )}
             onClick={() => setLocation(entry.id)}
           >

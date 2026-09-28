@@ -80,7 +80,7 @@ export function ScanPage() {
         </p>
       </div>
       <Card className="space-y-4">
-        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-[3px] border-transparent bg-accent px-4 text-sm font-semibold text-on-accent shadow-clay transition-colors duration-200 hover:bg-accent-hover">
+        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-2xl border border-transparent bg-accent px-4 text-sm font-semibold text-on-accent shadow-glass-soft transition-colors duration-200 hover:bg-accent-hover">
           Upload a photo
           <input
             className="sr-only"

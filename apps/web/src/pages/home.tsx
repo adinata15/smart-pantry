@@ -94,7 +94,7 @@ export function HomePage() {
         ) : (
           <ul className="space-y-2">
             {data.favorites.map((favorite) => (
-              <li key={favorite.itemId} className="rounded-2xl border-[3px] border-border bg-card px-3 py-2 text-sm shadow-clay">
+              <li key={favorite.itemId} className="glass rounded-2xl px-3 py-2 text-sm">
                 <span className="font-semibold">{favorite.name}</span>
                 <span className="text-muted-foreground"> · used {favorite.useCount} times</span>
               </li>

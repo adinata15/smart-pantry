@@ -39,7 +39,9 @@ function NavItem({ to, label, icon: IconMark, compact }: { to: string; label: st
         cn(
           "flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-colors duration-200",
           compact ? "flex-1 flex-col justify-center gap-1 px-1 text-[11px]" : "",
-          isActive ? "bg-highlight text-foreground" : "text-muted-foreground hover:bg-card",
+          isActive
+            ? "border border-glass-border bg-highlight text-foreground shadow-glass-soft backdrop-blur-sm"
+            : "text-muted-foreground hover:bg-highlight/60",
         )
       }
     >
@@ -62,14 +64,14 @@ export function AppShell() {
   });
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen text-foreground">
       <a
         href="#content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-2xl focus:bg-card focus:px-3 focus:py-2"
       >
         Skip to content
       </a>
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r-[3px] border-border bg-sidebar p-4 md:flex">
+      <aside className="glass-nav fixed inset-y-0 left-0 hidden w-60 flex-col border-r p-4 md:flex">
         <div className="font-heading mb-6 flex items-center gap-2 px-2 font-bold">
           <Leaf aria-hidden="true" className="size-5 text-primary" weight="regular" />
           Smart Pantry
@@ -81,7 +83,7 @@ export function AppShell() {
         </nav>
       </aside>
       <div className="md:pl-60">
-        <header className="sticky top-0 z-20 border-b-[3px] border-border bg-background/95 px-4 py-3 backdrop-blur">
+        <header className="glass-nav sticky top-0 z-20 border-b px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Household</p>
@@ -133,7 +135,7 @@ export function AppShell() {
         </main>
       </div>
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t-[3px] border-border bg-card px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="glass-nav fixed inset-x-0 bottom-0 z-30 flex border-t px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
         aria-label="Primary"
       >
         {primaryNav.map((item) => (

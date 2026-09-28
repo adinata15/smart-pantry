@@ -65,7 +65,7 @@ export const ErrorSummary = forwardRef<
       role="alert"
       tabIndex={-1}
       aria-labelledby={titleId}
-      className="rounded-2xl border-[3px] border-danger-border bg-danger-soft p-3"
+      className="rounded-2xl border border-danger-border bg-danger-soft p-3 shadow-glass-soft backdrop-blur-sm"
     >
       <h2 id={titleId} className="text-sm font-semibold text-danger-foreground">
         There is a problem
