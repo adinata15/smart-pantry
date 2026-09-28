@@ -1,38 +1,27 @@
 import type { MealsResponse } from "@smart-pantry/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { api, withToday } from "@/lib/api";
 import { useSession } from "@/shell/session";
 
 export function MealsPage() {
   const { household } = useSession();
-  const [includeAll, setIncludeAll] = useState(false);
   const meals = useQuery({
-    queryKey: ["meals", household?.id, includeAll],
+    queryKey: ["meals", household?.id],
     enabled: Boolean(household),
-    queryFn: () =>
-      api<MealsResponse>(
-        withToday(`/v1/households/${household!.id}/meals${includeAll ? "?locations=all" : ""}`),
-      ),
+    queryFn: () => api<MealsResponse>(withToday(`/v1/households/${household!.id}/meals`)),
   });
 
   const list = meals.data?.meals ?? [];
 
   return (
     <div className="space-y-6" aria-busy={meals.isLoading}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl font-bold">Meals</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Nutrition figures come from the catalog. They are estimates, not medical advice.
-          </p>
-        </div>
-        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" checked={includeAll} onChange={(event) => setIncludeAll(event.target.checked)} />
-          Include freezer and pantry
-        </label>
+      <div>
+        <h1 className="font-heading text-2xl font-bold">Meals</h1>
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Nutrition figures come from the catalog. They are estimates, not medical advice.
+        </p>
       </div>
       {meals.isLoading ? <p className="text-muted-foreground">Finding meals…</p> : null}
       {meals.isError ? <p role="alert">Could not load meal ideas.</p> : null}
@@ -46,14 +35,8 @@ export function MealsPage() {
           <p className="text-sm text-muted-foreground">No meal ideas yet for this stock.</p>
           <p className="text-sm">
             <Link to="/fridge" className="font-semibold underline">
-              Add stock in the fridge
+              Add stock
             </Link>
-            {includeAll ? null : (
-              <>
-                {" "}
-                or turn on “Include freezer and pantry.”
-              </>
-            )}
           </p>
         </Card>
       ) : null}

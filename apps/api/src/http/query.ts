@@ -9,10 +9,12 @@ export function readToday(query: unknown): string {
   return todayIso();
 }
 
+const ALL_LOCATIONS: LocationName[] = ["refrigerator", "freezer", "pantry"];
+
 export function readLocations(query: unknown): LocationName[] {
   if (query && typeof query === "object" && "locations" in query) {
     const value = String((query as { locations?: unknown }).locations ?? "");
-    if (value === "all") return ["refrigerator", "freezer", "pantry"];
+    if (value === "all") return [...ALL_LOCATIONS];
   }
-  return ["refrigerator"];
+  return [...ALL_LOCATIONS];
 }

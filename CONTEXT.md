@@ -21,7 +21,7 @@ The code a person uses to become a member of an existing household.
 _Avoid_: Link, token, password
 
 **Storage location**:
-Where a stock lot sits: Refrigerator, Freezer, or Pantry. Meal matching starts from the Refrigerator.
+Where a stock lot sits: Refrigerator, Freezer, or Pantry. Meal matching uses stock in all three.
 _Avoid_: Shelf, zone, bin
 
 **Item**:
@@ -53,7 +53,7 @@ A named way to cook a meal, with ingredients and per-serving nutrition facts.
 _Avoid_: Dish, menu item
 
 **Meal suggestion**:
-A recipe scored against the food in the chosen storage locations.
+A recipe scored against the food in the refrigerator, freezer, and pantry.
 _Avoid_: Plan, menu
 
 **Shopping need**:

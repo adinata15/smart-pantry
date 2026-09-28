@@ -79,30 +79,20 @@ export function recommendationsPlugin(ports: AppPorts, model: RecommendationMode
       const user = requireUser(request);
       const { householdId } = request.params as { householdId: string };
       const today = readToday(request.query);
-      const fridgeQuery = { ...(request.query as object), locations: "refrigerator" };
-      const { items, advice, householdName, useCounts, dismissals } = await loadAdvice(
+      const { items, advice, householdName } = await loadAdvice(
         ports,
         model,
         user.id,
         householdId,
-        fridgeQuery,
+        request.query,
       );
-      const shop = await buildAdvice({
-        items,
-        useCounts,
-        locations: ["refrigerator", "freezer", "pantry"],
-        recipes: RECIPES,
-        today,
-        model: null,
-        dismissals,
-      });
       const pantry = items.map((item) => toPantryItem(item, today));
       return {
         householdName,
         refrigerator: pantry.filter((item) => item.lots.some((lot) => lot.location === "refrigerator" && lot.quantity > 0)),
         expiringSoon: pantry.filter((item) => isExpiringSoon(item, today)),
         meals: advice.homeMeals,
-        shoppingCount: shop.shopping.length,
+        shoppingCount: advice.shopping.length,
         favorites: advice.favorites.slice(0, 3),
         source: advice.source,
       };
