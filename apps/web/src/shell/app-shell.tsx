@@ -1,0 +1,145 @@
+import type { Icon } from "@phosphor-icons/react";
+import {
+  ChartBar,
+  CookingPot,
+  ForkKnife,
+  House,
+  Leaf,
+  Scan,
+  ShoppingCart,
+  SignOut,
+} from "@phosphor-icons/react";
+import { NavLink, Outlet, useNavigate } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { controlSurfaceClassName } from "@/components/ui/input";
+import { HouseholdPanel } from "@/components/household-panel";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useSession } from "./session";
+import { SetupHousehold } from "@/pages/setup";
+
+const primaryNav: { to: string; label: string; icon: Icon }[] = [
+  { to: "/", label: "Home", icon: House },
+  { to: "/fridge", label: "Fridge", icon: CookingPot },
+  { to: "/scan", label: "Scan", icon: Scan },
+  { to: "/meals", label: "Meals", icon: ForkKnife },
+  { to: "/shop", label: "Shop", icon: ShoppingCart },
+];
+
+const allNav = [...primaryNav, { to: "/insights", label: "Insights", icon: ChartBar }];
+
+function NavItem({ to, label, icon: IconMark, compact }: { to: string; label: string; icon: Icon; compact?: boolean }) {
+  return (
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) =>
+        cn(
+          "flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-colors duration-200",
+          compact ? "flex-1 flex-col justify-center gap-1 px-1 text-[11px]" : "",
+          isActive ? "bg-highlight text-foreground" : "text-muted-foreground hover:bg-card",
+        )
+      }
+    >
+      <IconMark aria-hidden="true" className="size-5 shrink-0" weight="regular" />
+      <span>{label}</span>
+    </NavLink>
+  );
+}
+
+export function AppShell() {
+  const { user, households, household, setHouseholdId } = useSession();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const signOut = useMutation({
+    mutationFn: () => api("/v1/auth/sign-out", { method: "POST" }),
+    onSuccess: async () => {
+      await queryClient.clear();
+      navigate("/sign-in");
+    },
+  });
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <a
+        href="#content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-2xl focus:bg-card focus:px-3 focus:py-2"
+      >
+        Skip to content
+      </a>
+      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r-[3px] border-border bg-sidebar p-4 md:flex">
+        <div className="font-heading mb-6 flex items-center gap-2 px-2 font-bold">
+          <Leaf aria-hidden="true" className="size-5 text-primary" weight="regular" />
+          Smart Pantry
+        </div>
+        <nav className="flex flex-1 flex-col gap-1" aria-label="Primary">
+          {allNav.map((item) => (
+            <NavItem key={item.to} {...item} />
+          ))}
+        </nav>
+      </aside>
+      <div className="md:pl-60">
+        <header className="sticky top-0 z-20 border-b-[3px] border-border bg-background/95 px-4 py-3 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Household</p>
+              {households.length > 1 ? (
+                <label className="mt-1 block text-sm font-semibold">
+                  <span className="sr-only">Switch household</span>
+                  <select
+                    className={cn("min-h-11 max-w-full px-3 font-semibold", controlSurfaceClassName)}
+                    value={household?.id ?? ""}
+                    onChange={(event) => setHouseholdId(event.target.value)}
+                  >
+                    {households.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="truncate text-lg font-bold">{household?.name ?? "No household yet"}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="md:hidden">
+                <NavItem to="/insights" label="Insights" icon={ChartBar} />
+              </div>
+              <span className="hidden text-sm text-muted-foreground sm:inline">{user.displayName}</span>
+              <ThemeToggle />
+              <Button variant="ghost" type="button" onClick={() => signOut.mutate()}>
+                <SignOut aria-hidden="true" className="size-4" weight="regular" />
+                Sign out
+              </Button>
+            </div>
+          </div>
+        </header>
+        <main
+          id="content"
+          className="mx-auto max-w-6xl scroll-mt-[var(--header-offset)] px-4 py-6 pb-28 md:px-8 md:pb-10"
+          style={{ scrollPaddingTop: "var(--header-offset)", scrollPaddingBottom: "var(--bottom-nav-offset)" }}
+        >
+          {household ? (
+            <div className="space-y-6">
+              <Outlet />
+              <HouseholdPanel />
+            </div>
+          ) : (
+            <SetupHousehold />
+          )}
+        </main>
+      </div>
+      <nav
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t-[3px] border-border bg-card px-1 pb-[env(safe-area-inset-bottom)] md:hidden"
+        aria-label="Primary"
+      >
+        {primaryNav.map((item) => (
+          <NavItem key={item.to} {...item} compact />
+        ))}
+      </nav>
+    </div>
+  );
+}

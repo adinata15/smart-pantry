@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.env
+coverage
+*.md
+apps/web/dist
+apps/api/dist
+packages/contracts/dist

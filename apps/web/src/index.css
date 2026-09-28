@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Varela Round", ui-rounded, system-ui, sans-serif;
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-on-destructive: var(--on-destructive);
+  --color-ring: var(--ring);
+  --color-highlight: var(--highlight);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-sidebar: var(--sidebar);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent-hover: var(--accent-hover);
+  --color-destructive-hover: var(--destructive-hover);
+  --shadow-clay: var(--clay-shadow);
+  --shadow-clay-press: var(--clay-shadow-press);
+}
+
+:root {
+  --primary: #9a3412;
+  --on-primary: #ffffff;
+  --accent: #059669;
+  --on-accent: #000000;
+  --background: #fffbeb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #f8f2f0;
+  --muted-foreground: #475569;
+  --border: #a67c52;
+  --destructive: #dc2626;
+  --on-destructive: #ffffff;
+  --ring: #9a3412;
+  --highlight: #fde8dc;
+  --input: #ffffff;
+  --input-border: #a67c52;
+  --sidebar: #fff7ed;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-foreground: #991b1b;
+  --primary-hover: #7c2d12;
+  --accent-hover: #10b981;
+  --destructive-hover: #b91c1c;
+  --clay-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 4px 0 rgba(166, 124, 82, 0.22), 0 8px 16px rgba(15, 23, 42, 0.08);
+  --clay-shadow-press: inset 0 2px 4px rgba(15, 23, 42, 0.12), 0 1px 0 rgba(166, 124, 82, 0.15);
+  --header-offset: 5.5rem;
+  --bottom-nav-offset: 5.5rem;
+}
+
+.dark {
+  --primary: #9a3412;
+  --on-primary: #ffffff;
+  --accent: #059669;
+  --on-accent: #000000;
+  --background: #1c1410;
+  --foreground: #fffbeb;
+  --card: #2a211c;
+  --muted: #3f2a22;
+  --muted-foreground: #a8a29e;
+  --border: #bcaaa4;
+  --destructive: #dc2626;
+  --on-destructive: #ffffff;
+  --ring: #fde68a;
+  --highlight: #3f2a22;
+  --input: #1c1410;
+  --input-border: #bcaaa4;
+  --sidebar: #160f0c;
+  --danger-soft: #450a0a;
+  --danger-border: #7f1d1d;
+  --danger-foreground: #fecaca;
+  --primary-hover: #7c2d12;
+  --accent-hover: #10b981;
+  --destructive-hover: #b91c1c;
+  --clay-shadow: inset 0 1px 0 rgba(255, 251, 235, 0.08), 0 4px 0 rgba(0, 0, 0, 0.35), 0 10px 20px rgba(0, 0, 0, 0.35);
+  --clay-shadow-press: inset 0 2px 6px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(188, 170, 164, 0.2);
+}
+
+html {
+  scroll-padding-top: var(--header-offset);
+  scroll-padding-bottom: var(--bottom-nav-offset);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

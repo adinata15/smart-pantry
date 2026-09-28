@@ -1,0 +1,20 @@
+{
+  "name": "smart-pantry",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @smart-pantry/contracts && npm run build -w @smart-pantry/api && npm run build -w @smart-pantry/web",
+    "dev:api": "npm run build -w @smart-pantry/contracts && npm run dev -w @smart-pantry/api",
+    "dev:web": "npm run dev -w @smart-pantry/web",
+    "test": "npm run build -w @smart-pantry/contracts && npm run test -w @smart-pantry/api",
+    "typecheck": "npm run build -w @smart-pantry/contracts && npm run typecheck -w @smart-pantry/api",
+    "db:generate": "npm run db:generate -w @smart-pantry/api",
+    "db:migrate": "npm run db:migrate -w @smart-pantry/api"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

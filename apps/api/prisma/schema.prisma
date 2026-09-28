@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime     @default(now())
+  sessions     Session[]
+  memberships  Membership[]
+  useEvents    UseEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Household {
+  id          String              @id @default(cuid())
+  name        String
+  inviteCode  String              @unique
+  createdAt   DateTime            @default(now())
+  memberships Membership[]
+  items       Item[]
+  useEvents   UseEvent[]
+  dismissals  ShoppingDismissal[]
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  householdId String
+  userId      String
+  role        String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId])
+  @@index([userId])
+}
+
+model Item {
+  id          String     @id @default(cuid())
+  householdId String
+  name        String
+  unit        String
+  parLevel    Float?
+  pinned      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  lots        StockLot[]
+  useEvents   UseEvent[]
+
+  @@index([householdId])
+}
+
+model StockLot {
+  id         String    @id @default(cuid())
+  itemId     String
+  location   String
+  quantity   Float
+  expiryDate DateTime?
+  item       Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+model UseEvent {
+  id          String    @id @default(cuid())
+  householdId String
+  itemId      String
+  userId      String
+  quantity    Float
+  usedAt      DateTime  @default(now())
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([householdId, usedAt])
+}
+
+model ShoppingDismissal {
+  id               String    @id @default(cuid())
+  householdId      String
+  itemKey          String
+  stockFingerprint String
+  household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, itemKey])
+}

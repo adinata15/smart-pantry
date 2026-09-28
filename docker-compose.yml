@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pantry
+      POSTGRES_PASSWORD: pantry
+      POSTGRES_DB: smart_pantry
+    ports:
+      - "5433:5432"
+    volumes:
+      - pantry_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pantry -d smart_pantry"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://pantry:pantry@postgres:5432/smart_pantry?schema=public
+      WEB_ORIGIN: http://localhost:8080,http://localhost:5173
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      COOKIE_SECURE: "false"
+      API_PORT: "3001"
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  pantry_pg:

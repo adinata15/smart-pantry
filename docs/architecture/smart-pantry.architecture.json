@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Smart Pantry Architecture",
+    "locale": "en",
+    "output": "smart-pantry.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "kitchen-request",
+        "label": "Kitchen request",
+        "focus": ["member", "web", "api", "db"],
+        "note": "A member uses the React client; the Fastify API owns stock and answers over /v1."
+      },
+      {
+        "id": "receipt-intake",
+        "label": "Receipt intake",
+        "focus": ["web", "ocr", "api", "db"],
+        "note": "Tesseract stays in the browser; only receipt text reaches parse and commit."
+      },
+      {
+        "id": "meal-advice",
+        "label": "Meal and shopping advice",
+        "focus": ["api", "openai", "db"],
+        "note": "OpenAI is optional behind RecommendationModel; the matcher answers when the model cannot."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "member",
+      "type": "external",
+      "label": "Member",
+      "sublabel": "Household person",
+      "pos": [48, 320],
+      "size": [128, 64]
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "Web client",
+      "sublabel": "React SPA :8080",
+      "brand": "react",
+      "tag": "nginx static",
+      "pos": [260, 320],
+      "size": [148, 64]
+    },
+    {
+      "id": "ocr",
+      "type": "frontend",
+      "label": "Tesseract.js",
+      "sublabel": "Browser OCR port",
+      "tag": "image stays local",
+      "pos": [260, 140],
+      "size": [148, 64]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Fastify API",
+      "sublabel": "Modular monolith :3001",
+      "tag": "stateless /v1",
+      "pos": [520, 320],
+      "size": [160, 64]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Postgres 16",
+      "brand": "postgresql",
+      "pos": [800, 320],
+      "size": [140, 64]
+    },
+    {
+      "id": "openai",
+      "type": "external",
+      "label": "OpenAI",
+      "sublabel": "RecommendationModel",
+      "brand": "openai",
+      "tag": "OPENAI_API_KEY",
+      "pos": [980, 320],
+      "size": [160, 64]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Browser",
+      "wraps": ["web", "ocr"],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "API container",
+      "wraps": ["api"],
+      "pad": 28
+    }
+  ],
+  "connections": [
+    {
+      "id": "member-to-web",
+      "from": "member",
+      "to": "web",
+      "label": "uses kitchen app",
+      "variant": "emphasis"
+    },
+    {
+      "id": "web-to-ocr",
+      "from": "web",
+      "to": "ocr",
+      "label": "recognize receipt image",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "web-to-api",
+      "from": "web",
+      "to": "api",
+      "label": "HTTPS /v1 JSON + cookie",
+      "variant": "emphasis",
+      "labelDy": 56
+    },
+    {
+      "id": "api-to-db",
+      "from": "api",
+      "to": "db",
+      "label": "Prisma SQL"
+    },
+    {
+      "id": "api-to-openai",
+      "from": "api",
+      "to": "openai",
+      "label": "optional advice prompt",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Containers",
+      "items": [
+        "Docker Compose runs web, api, and postgres on one network",
+        "The web container serves the static React client on :8080",
+        "AWS stays later; these images remain the deploy unit"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "API modules",
+      "items": [
+        "One Fastify plugin per context: identity, household, inventory, consumption, intake, catalog, recommendations",
+        "Domain rules stay off the framework and off the Prisma client",
+        "@smart-pantry/contracts keeps the /v1 wire format shared"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Trust",
+      "items": [
+        "Session cookie stores a hashed token; CORS is credentialed",
+        "OPENAI_API_KEY lives only in the API container",
+        "Receipt text is not sent to the model; the matcher answers when the model cannot"
+      ]
+    }
+  ]
+}
