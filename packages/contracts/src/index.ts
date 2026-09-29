@@ -88,6 +88,33 @@ export interface UseItemRequest {
   quantity: number;
 }
 
+export interface MealUseQuantity {
+  ingredient: string;
+  quantity: number;
+}
+
+export interface UseMealRequest {
+  quantities?: MealUseQuantity[];
+}
+
+export interface MealUseQuantityLine {
+  ingredient: string;
+  unit: string;
+  onHand: number;
+  suggested: number | null;
+}
+
+export interface UseMealUsedResponse {
+  status: "used";
+}
+
+export interface UseMealNeedsQuantityResponse {
+  status: "needs-quantity";
+  lines: MealUseQuantityLine[];
+}
+
+export type UseMealResponse = UseMealUsedResponse | UseMealNeedsQuantityResponse;
+
 export interface ParsedLine {
   name: string;
   quantity: number;

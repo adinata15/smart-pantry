@@ -56,6 +56,10 @@ _Avoid_: Dish, menu item
 A recipe scored against the food in the refrigerator, freezer, and pantry.
 _Avoid_: Plan, menu
 
+**Meal use**:
+A use of every ingredient in one recipe, only when each ingredient is already on hand.
+_Avoid_: Consume, cook log
+
 **Shopping need**:
 Something to buy, with a reason: below par, a favorite running low, or missing from a near-match recipe.
 _Avoid_: Cart line, list item

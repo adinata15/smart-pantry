@@ -229,6 +229,36 @@ export function createPorts(prisma: PrismaClient) {
         return mapItem(next);
       });
     },
+    async saveMealConsumption(input: {
+      householdId: string;
+      userId: string;
+      lines: { itemId: string; quantity: number; lots: LotDraft[] }[];
+    }) {
+      await prisma.$transaction(async (tx) => {
+        for (const line of input.lines) {
+          const item = await tx.item.findFirst({
+            where: { id: line.itemId, householdId: input.householdId },
+          });
+          if (!item) throw new HttpError(404, "not_found", "That item is not in this household.");
+          const keep = new Set(line.lots.map((lot) => lot.id));
+          await tx.stockLot.deleteMany({ where: { itemId: line.itemId, id: { notIn: [...keep] } } });
+          for (const lot of line.lots) {
+            await tx.stockLot.update({
+              where: { id: lot.id },
+              data: { quantity: roundQty(lot.quantity) },
+            });
+          }
+          await tx.useEvent.create({
+            data: {
+              householdId: input.householdId,
+              itemId: line.itemId,
+              userId: input.userId,
+              quantity: roundQty(line.quantity),
+            },
+          });
+        }
+      });
+    },
     async useCounts(householdId: string, since: Date) {
       const grouped = await prisma.useEvent.groupBy({
         by: ["itemId"],

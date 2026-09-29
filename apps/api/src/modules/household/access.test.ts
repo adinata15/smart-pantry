@@ -15,6 +15,7 @@ function stubPorts(partial: Pick<InventoryPorts, "membership" | "listItems">): I
     addLot: async () => unused(),
     updateLot: async () => unused(),
     saveConsumption: async () => unused(),
+    saveMealConsumption: async () => unused(),
     ...partial,
   };
 }

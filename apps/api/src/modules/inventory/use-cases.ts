@@ -19,6 +19,11 @@ export interface InventoryPorts {
     quantity: number;
     lots: ItemDraft["lots"];
   }): Promise<ItemDraft>;
+  saveMealConsumption(input: {
+    householdId: string;
+    userId: string;
+    lines: { itemId: string; quantity: number; lots: ItemDraft["lots"] }[];
+  }): Promise<void>;
 }
 
 async function gate(ports: InventoryPorts, userId: string, householdId: string) {
