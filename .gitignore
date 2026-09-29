@@ -4,3 +4,7 @@ dist
 coverage
 .DS_Store
 *.tsbuildinfo
+
+# Archify visual-check evidence and delivery scratch
+docs/architecture/*.visual-check.*
+docs/architecture/.archify-delivery-*/

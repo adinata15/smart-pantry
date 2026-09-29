@@ -22,8 +22,8 @@
       {
         "id": "meal-advice",
         "label": "Meal and shopping advice",
-        "focus": ["api", "openai", "db"],
-        "note": "OpenAI is optional behind RecommendationModel; the matcher answers when the model cannot."
+        "focus": ["api", "codex", "openai", "db"],
+        "note": "Advice prefers the member Codex login, then OPENAI_API_KEY, then the matcher."
       }
     ]
   },
@@ -33,7 +33,7 @@
       "type": "external",
       "label": "Member",
       "sublabel": "Household person",
-      "pos": [48, 320],
+      "pos": [48, 340],
       "size": [128, 64]
     },
     {
@@ -43,7 +43,7 @@
       "sublabel": "React SPA :8080",
       "brand": "react",
       "tag": "nginx static",
-      "pos": [260, 320],
+      "pos": [260, 340],
       "size": [148, 64]
     },
     {
@@ -61,7 +61,17 @@
       "label": "Fastify API",
       "sublabel": "Modular monolith :3001",
       "tag": "stateless /v1",
-      "pos": [520, 320],
+      "pos": [520, 340],
+      "size": [160, 64]
+    },
+    {
+      "id": "codex",
+      "type": "backend",
+      "label": "Codex CLI",
+      "sublabel": "API host login",
+      "tag": "callback :1455",
+      "brand": "openai",
+      "pos": [520, 540],
       "size": [160, 64]
     },
     {
@@ -70,7 +80,7 @@
       "label": "PostgreSQL",
       "sublabel": "Postgres 16",
       "brand": "postgresql",
-      "pos": [800, 320],
+      "pos": [800, 340],
       "size": [140, 64]
     },
     {
@@ -80,7 +90,16 @@
       "sublabel": "RecommendationModel",
       "brand": "openai",
       "tag": "OPENAI_API_KEY",
-      "pos": [980, 320],
+      "pos": [1040, 340],
+      "size": [160, 64]
+    },
+    {
+      "id": "chatgpt",
+      "type": "external",
+      "label": "ChatGPT OAuth",
+      "sublabel": "Member sign-in",
+      "brand": "openai",
+      "pos": [260, 540],
       "size": [160, 64]
     }
   ],
@@ -94,7 +113,7 @@
     {
       "kind": "region",
       "label": "API container",
-      "wraps": ["api"],
+      "wraps": ["api", "codex"],
       "pad": 28
     }
   ],
@@ -133,10 +152,36 @@
       "id": "api-to-openai",
       "from": "api",
       "to": "openai",
-      "label": "optional advice prompt",
+      "label": "optional advice and unit convert",
       "variant": "dashed",
       "fromSide": "top",
       "toSide": "top"
+    },
+    {
+      "id": "api-to-codex",
+      "from": "api",
+      "to": "codex",
+      "label": "codex login; seal home",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "web-to-chatgpt",
+      "from": "web",
+      "to": "chatgpt",
+      "label": "open ChatGPT OAuth",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "chatgpt-to-codex",
+      "from": "chatgpt",
+      "to": "codex",
+      "label": "OAuth callback :1455",
+      "variant": "security",
+      "labelDy": -26
     }
   ],
   "cards": [
@@ -145,7 +190,6 @@
       "title": "Containers",
       "items": [
         "Docker Compose runs web, api, and postgres on one network",
-        "The web container serves the static React client on :8080",
         "AWS stays later; these images remain the deploy unit"
       ]
     },
@@ -153,8 +197,7 @@
       "dot": "emerald",
       "title": "API modules",
       "items": [
-        "One Fastify plugin per context: identity, household, inventory, consumption, intake, catalog, recommendations",
-        "Domain rules stay off the framework and off the Prisma client",
+        "Plugins: identity, household, inventory, consumption, intake, catalog, codex login, recommendations",
         "@smart-pantry/contracts keeps the /v1 wire format shared"
       ]
     },
@@ -162,9 +205,8 @@
       "dot": "rose",
       "title": "Trust",
       "items": [
-        "Session cookie stores a hashed token; CORS is credentialed",
-        "OPENAI_API_KEY lives only in the API container",
-        "Receipt text is not sent to the model; the matcher answers when the model cannot"
+        "Hashed session cookie; sealed Codex homes and OPENAI_API_KEY stay in the API",
+        "Receipt text stays off the model; meal unit convert uses the process key when present"
       ]
     }
   ]
