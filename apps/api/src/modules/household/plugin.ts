@@ -5,6 +5,7 @@ import type { AppPorts } from "../../infra/prisma-ports";
 import { newInviteCode } from "../../infra/tokens";
 import { readBody, requireUser } from "../../http/parse";
 import { assertMembership } from "./access";
+import { leaveHousehold } from "./leave";
 
 const createSchema = z.object({
   name: z.string().trim().min(1, "Enter a household name.").max(80),
@@ -14,9 +15,8 @@ const joinSchema = z.object({
   inviteCode: z.string().trim().min(4, "Enter an invite code.").max(16),
 });
 
-const switchSchema = z.object({
-  fromHouseholdId: z.string().trim().min(1, "Choose the household you are leaving."),
-  inviteCode: z.string().trim().min(4, "Enter an invite code.").max(16),
+const leaveSchema = z.object({
+  householdId: z.string().trim().min(1, "Choose the household you are leaving."),
   successorUserId: z.string().trim().min(1).optional(),
 });
 
@@ -24,6 +24,10 @@ export function householdPlugin(ports: AppPorts): FastifyPluginAsync {
   return async (app) => {
     app.post("/households", async (request) => {
       const user = requireUser(request);
+      const existing = await ports.listHouseholds(user.id);
+      if (existing.length > 0) {
+        throw new HttpError(409, "conflict", "Leave your current household before creating another.");
+      }
       const body = readBody(createSchema, request.body);
       for (let attempt = 0; attempt < 5; attempt += 1) {
         try {
@@ -56,32 +60,34 @@ export function householdPlugin(ports: AppPorts): FastifyPluginAsync {
 
     app.post("/households/join", async (request) => {
       const user = requireUser(request);
+      const existing = await ports.listHouseholds(user.id);
+      if (existing.length > 0) {
+        throw new HttpError(409, "conflict", "Leave your current household before joining another.");
+      }
       const body = readBody(joinSchema, request.body);
       const code = body.inviteCode.trim().toUpperCase();
       const found = await ports.findHouseholdByInvite(code);
       if (!found) throw new HttpError(404, "not_found", "That invite code does not match a household.");
-      const membership = await ports.membership(user.id, found.id);
-      if (!membership) await ports.addMember(found.id, user.id);
+      await ports.addMember(found.id, user.id);
       return {
         household: {
           id: found.id,
           name: found.name,
-          role: membership?.role ?? "member",
+          role: "member" as const,
           inviteCode: found.inviteCode,
         },
       };
     });
 
-    app.post("/households/switch", async (request) => {
+    app.post("/households/leave", async (request) => {
       const user = requireUser(request);
-      const body = readBody(switchSchema, request.body);
-      const household = await ports.switchHousehold({
+      const body = readBody(leaveSchema, request.body);
+      await leaveHousehold(ports, {
         userId: user.id,
-        fromHouseholdId: body.fromHouseholdId,
-        inviteCode: body.inviteCode.trim().toUpperCase(),
+        householdId: body.householdId,
         successorUserId: body.successorUserId,
       });
-      return { household };
+      return { ok: true };
     });
   };
 }

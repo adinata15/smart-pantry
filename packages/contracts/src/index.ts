@@ -68,9 +68,8 @@ export interface JoinHouseholdRequest {
   inviteCode: string;
 }
 
-export interface SwitchHouseholdRequest {
-  fromHouseholdId: string;
-  inviteCode: string;
+export interface LeaveHouseholdRequest {
+  householdId: string;
   successorUserId?: string;
 }
 

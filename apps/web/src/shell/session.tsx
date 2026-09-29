@@ -38,6 +38,7 @@ export function SessionProvider({ user, children }: { user: PublicUser; children
 
   useEffect(() => {
     if (householdId) localStorage.setItem(HOUSEHOLD_STORAGE_KEY, householdId);
+    else localStorage.removeItem(HOUSEHOLD_STORAGE_KEY);
   }, [householdId]);
 
   const household = list.find((entry) => entry.id === householdId) ?? null;

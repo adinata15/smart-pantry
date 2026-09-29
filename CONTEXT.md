@@ -9,7 +9,7 @@ The shared kitchen a group of people stock and cook from.
 _Avoid_: Account, family, tenant
 
 **Member**:
-A person who belongs to a household.
+A person who belongs to exactly one household.
 _Avoid_: User, account
 
 **Owner**:
@@ -19,6 +19,10 @@ _Avoid_: Admin, manager
 **Invite code**:
 The code a person uses to become a member of an existing household.
 _Avoid_: Link, token, password
+
+**Household leave**:
+A member exits their household. If they are the owner and others remain, they appoint a new owner first. If they are the last member, the household is soft-deleted. They may create or join a household afterward.
+_Avoid_: Switch, transfer, migrate
 
 **Storage location**:
 Where a stock lot sits: Refrigerator, Freezer, or Pantry. Meal matching uses stock in all three.

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ErrorSummary, Field, focusSummary, messageFor, type FieldError } from "@/components/field";
-import { SwitchHouseholdForm } from "@/components/household-panel";
+import { LeaveHouseholdForm } from "@/components/household-panel";
 import { ApiError, api } from "@/lib/api";
 import { useSession } from "@/shell/session";
 
@@ -247,7 +247,7 @@ function HouseholdCard() {
     );
   }
 
-  return <SwitchHouseholdForm title="Household" />;
+  return <LeaveHouseholdForm title="Leave household" />;
 }
 
 export function ProfilePage() {

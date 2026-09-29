@@ -1,27 +1,38 @@
-import type { HouseholdMember, HouseholdSummary } from "@smart-pantry/contracts";
+import type { HouseholdMember } from "@smart-pantry/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ErrorSummary, Field, focusSummary, messageFor, type FieldError } from "@/components/field";
 import { ApiError, api } from "@/lib/api";
-import { useSession } from "@/shell/session";
+import { HOUSEHOLD_STORAGE_KEY, useSession } from "@/shell/session";
 
-type SwitchHouseholdFormProps = {
-  variant?: "card" | "plain";
-  title?: string;
-};
+type PanelVariant = "card" | "plain";
 
-export function SwitchHouseholdForm({
+function PanelShell({
+  variant,
+  children,
+}: {
+  variant: PanelVariant;
+  children: ReactNode;
+}) {
+  if (variant === "plain") {
+    return <div className="space-y-4">{children}</div>;
+  }
+  return <Card className="space-y-4">{children}</Card>;
+}
+
+export function LeaveHouseholdForm({
   variant = "card",
-  title = "Switch household",
-}: SwitchHouseholdFormProps) {
+  title = "Leave household",
+}: {
+  variant?: PanelVariant;
+  title?: string;
+}) {
   const { user, household, setHouseholdId } = useSession();
   const queryClient = useQueryClient();
   const summary = useRef<HTMLDivElement>(null);
-  const [inviteCode, setInviteCode] = useState("");
   const [successorUserId, setSuccessorUserId] = useState("");
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [formError, setFormError] = useState("");
@@ -37,27 +48,26 @@ export function SwitchHouseholdForm({
   const needsSuccessor = household?.role === "owner" && successors.length > 0;
   const isLastMember = (members.data?.members.length ?? 0) <= 1;
 
-  const switchHousehold = useMutation({
+  const leaveHousehold = useMutation({
     mutationFn: () =>
-      api<{ household: HouseholdSummary }>("/v1/households/switch", {
+      api<{ ok: true }>("/v1/households/leave", {
         method: "POST",
         body: JSON.stringify({
-          fromHouseholdId: household!.id,
-          inviteCode,
+          householdId: household!.id,
           ...(needsSuccessor && successorUserId ? { successorUserId } : {}),
         }),
       }),
-    onSuccess: async (result) => {
+    onSuccess: async () => {
       setErrors([]);
       setFormError("");
-      setInviteCode("");
       setSuccessorUserId("");
-      setHouseholdId(result.household.id);
+      localStorage.removeItem(HOUSEHOLD_STORAGE_KEY);
+      setHouseholdId("");
       await queryClient.invalidateQueries({ queryKey: ["households"] });
       await queryClient.invalidateQueries({ queryKey: ["household-members"] });
     },
     onError: (error) =>
-      setFormError(error instanceof ApiError ? error.message : "Could not switch to that household."),
+      setFormError(error instanceof ApiError ? error.message : "Could not leave that household."),
   });
 
   if (!household) return null;
@@ -74,12 +84,11 @@ export function SwitchHouseholdForm({
     }
   }
 
-  function onSwitch(event: FormEvent) {
+  function onLeave(event: FormEvent) {
     event.preventDefault();
     const next: FieldError[] = [];
-    if (!inviteCode.trim()) next.push({ id: "switch-invite", message: "Enter an invite code." });
     if (needsSuccessor && !successorUserId) {
-      next.push({ id: "switch-successor", message: "Choose the next owner before you leave." });
+      next.push({ id: "leave-successor", message: "Choose the next owner before you leave." });
     }
     setErrors(next);
     setFormError("");
@@ -87,21 +96,21 @@ export function SwitchHouseholdForm({
       focusSummary(summary);
       return;
     }
-    switchHousehold.mutate();
+    leaveHousehold.mutate();
   }
 
   const helperText = isLastMember
-    ? "Entering another invite code leaves this kitchen and closes it. Fridge data stays stored but is no longer available."
+    ? "Leaving closes this kitchen. Fridge data stays stored but is no longer available. You can create or join a household afterward."
     : needsSuccessor
-      ? "As owner, choose the next owner before you leave, then enter another household's invite code."
-      : "Enter another household's invite code to leave this kitchen and join that one.";
+      ? "As owner, choose the next owner before you leave. You can create or join a household afterward."
+      : "Leave this kitchen. You can create or join a household afterward.";
 
-  const body = (
-    <>
+  return (
+    <PanelShell variant={variant}>
       <div>
         <h2 className="font-heading text-lg font-bold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {helperText} Your role is {active.role}.
+          {active.name} · your role is {active.role}. {helperText}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -110,15 +119,15 @@ export function SwitchHouseholdForm({
           {copied ? "Copied" : "Copy invite code"}
         </Button>
       </div>
-      <form className="space-y-3" onSubmit={onSwitch} noValidate>
-        <ErrorSummary ref={summary} titleId="switch-household-errors" errors={errors} />
+      <form className="space-y-3" onSubmit={onLeave} noValidate>
+        <ErrorSummary ref={summary} titleId="leave-household-errors" errors={errors} />
         {formError ? (
           <p role="alert" className="text-sm text-danger-foreground">
             {formError}
           </p>
         ) : null}
         {needsSuccessor ? (
-          <Field id="switch-successor" label="Next owner" error={messageFor(errors, "switch-successor")}>
+          <Field id="leave-successor" label="Next owner" error={messageFor(errors, "leave-successor")}>
             <Select
               aria-label="Next owner"
               value={successorUserId}
@@ -133,23 +142,10 @@ export function SwitchHouseholdForm({
             />
           </Field>
         ) : null}
-        <Field id="switch-invite" label="Invite code" error={messageFor(errors, "switch-invite")}>
-          <Input
-            value={inviteCode}
-            autoCapitalize="characters"
-            onChange={(event) => setInviteCode(event.target.value)}
-          />
-        </Field>
-        <Button type="submit" variant="ghost" disabled={switchHousehold.isPending || members.isLoading}>
-          {switchHousehold.isPending ? "Switching…" : "Switch household"}
+        <Button type="submit" variant="ghost" disabled={leaveHousehold.isPending || members.isLoading}>
+          {leaveHousehold.isPending ? "Leaving…" : "Leave household"}
         </Button>
       </form>
-    </>
+    </PanelShell>
   );
-
-  if (variant === "plain") {
-    return <div className="space-y-4">{body}</div>;
-  }
-
-  return <Card className="space-y-4">{body}</Card>;
 }

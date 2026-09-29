@@ -12,7 +12,7 @@ import type {
 import { ITEM_CATEGORIES } from "@smart-pantry/contracts";
 import { HttpError } from "./errors";
 import { assertMembership } from "../modules/household/access";
-import { decideLeave } from "../modules/household/leave";
+import type { LeavePlan } from "../modules/household/leave";
 import type { ItemDraft } from "../modules/inventory/freshness";
 import type { LotDraft } from "../modules/inventory/fifo";
 import { roundQty } from "../modules/inventory/fifo";
@@ -153,74 +153,43 @@ export function createPorts(prisma: PrismaClient) {
         role: asRole(membership.role),
       }));
     },
-    async switchHousehold(input: {
-      userId: string;
-      fromHouseholdId: string;
-      inviteCode: string;
-      successorUserId?: string;
-    }): Promise<HouseholdSummary> {
-      return prisma.$transaction(async (tx) => {
-        const from = await tx.household.findFirst({
-          where: { id: input.fromHouseholdId, deletedAt: null },
-          include: { memberships: true },
-        });
-        if (!from) throw new HttpError(404, "not_found", "That household was not found.");
+    async loadLeaveContext(input: { userId: string; householdId: string }) {
+      const household = await prisma.household.findFirst({
+        where: { id: input.householdId, deletedAt: null },
+        include: { memberships: true },
+      });
+      if (!household) throw new HttpError(404, "not_found", "That household was not found.");
 
-        const leaver = from.memberships.find((row) => row.userId === input.userId);
-        if (!leaver) throw new HttpError(403, "forbidden", "You are not a member of this household.");
+      const leaver = household.memberships.find((row) => row.userId === input.userId);
+      if (!leaver) throw new HttpError(403, "forbidden", "You are not a member of this household.");
 
-        const target = await tx.household.findFirst({
-          where: { inviteCode: input.inviteCode, deletedAt: null },
-        });
-        if (!target) throw new HttpError(404, "not_found", "That invite code does not match a household.");
-        if (target.id === from.id) {
-          throw new HttpError(400, "bad_request", "You are already in that household.");
-        }
-
-        const decision = decideLeave({
-          role: asRole(leaver.role),
-          memberUserIds: from.memberships.map((row) => row.userId),
-          leaverUserId: input.userId,
-          successorUserId: input.successorUserId,
-        });
-
-        if (decision.kind === "promote_then_leave") {
+      return {
+        householdId: household.id,
+        role: asRole(leaver.role),
+        memberUserIds: household.memberships.map((row) => row.userId),
+      };
+    },
+    async applyLeave(plan: LeavePlan) {
+      await prisma.$transaction(async (tx) => {
+        if (plan.promoteUserId) {
           await tx.membership.update({
             where: {
-              householdId_userId: { householdId: from.id, userId: decision.successorUserId },
+              householdId_userId: { householdId: plan.householdId, userId: plan.promoteUserId },
             },
             data: { role: "owner" },
           });
         }
 
         await tx.membership.delete({
-          where: { householdId_userId: { householdId: from.id, userId: input.userId } },
+          where: { householdId_userId: { householdId: plan.householdId, userId: plan.userId } },
         });
 
-        const remaining = await tx.membership.count({ where: { householdId: from.id } });
-        if (remaining === 0) {
+        if (plan.softDelete) {
           await tx.household.update({
-            where: { id: from.id },
+            where: { id: plan.householdId },
             data: { deletedAt: new Date() },
           });
         }
-
-        const existing = await tx.membership.findUnique({
-          where: { householdId_userId: { householdId: target.id, userId: input.userId } },
-        });
-        if (!existing) {
-          await tx.membership.create({
-            data: { householdId: target.id, userId: input.userId, role: "member" },
-          });
-        }
-
-        const membership = existing ?? { role: "member" };
-        return {
-          id: target.id,
-          name: target.name,
-          role: asRole(membership.role),
-          inviteCode: target.inviteCode,
-        };
       });
     },
     async householdName(householdId: string) {
