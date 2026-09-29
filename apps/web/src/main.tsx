@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import type { PublicUser } from "@smart-pantry/contracts";
 import { api } from "@/lib/api";
+import { SignInPage, SignUpPage } from "@/pages/auth";
+import { ErrorPage } from "@/pages/error";
 import { FridgePage } from "@/pages/fridge";
 import { HomePage } from "@/pages/home";
 import { InsightsPage } from "@/pages/insights";
@@ -11,7 +13,6 @@ import { MealsPage } from "@/pages/meals";
 import { ProfilePage } from "@/pages/profile";
 import { ScanPage } from "@/pages/scan";
 import { ShopPage } from "@/pages/shop";
-import { SignInPage, SignUpPage } from "@/pages/auth";
 import { AppShell } from "@/shell/app-shell";
 import { SessionProvider } from "@/shell/session";
 import { ThemeProvider } from "@/shell/theme";
@@ -37,19 +38,25 @@ function Protected() {
 }
 
 const router = createBrowserRouter([
-  { path: "/sign-in", element: <SignInPage /> },
-  { path: "/sign-up", element: <SignUpPage /> },
   {
-    path: "/",
-    element: <Protected />,
+    errorElement: <ErrorPage />,
     children: [
-      { index: true, element: <HomePage /> },
-      { path: "fridge", element: <FridgePage /> },
-      { path: "scan", element: <ScanPage /> },
-      { path: "meals", element: <MealsPage /> },
-      { path: "shop", element: <ShopPage /> },
-      { path: "insights", element: <InsightsPage /> },
-      { path: "profile", element: <ProfilePage /> },
+      { path: "/sign-in", element: <SignInPage /> },
+      { path: "/sign-up", element: <SignUpPage /> },
+      {
+        path: "/",
+        element: <Protected />,
+        children: [
+          { index: true, element: <HomePage /> },
+          { path: "fridge", element: <FridgePage /> },
+          { path: "scan", element: <ScanPage /> },
+          { path: "meals", element: <MealsPage /> },
+          { path: "shop", element: <ShopPage /> },
+          { path: "insights", element: <InsightsPage /> },
+          { path: "profile", element: <ProfilePage /> },
+        ],
+      },
+      { path: "*", element: <ErrorPage /> },
     ],
   },
 ]);
