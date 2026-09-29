@@ -1,11 +1,12 @@
 import type { Freshness, ItemCategory, LocationName, PantryItem, StockLot } from "@smart-pantry/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PushPin } from "@phosphor-icons/react";
-import { useMemo, useRef, useState, type FormEvent, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useMemo, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 import { FreshnessBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { controlSurfaceClassName, Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ErrorSummary, Field, focusSummary, messageFor, type FieldError } from "@/components/field";
 import { ApiError, api, formatDay, isoToDmy, localToday, withToday } from "@/lib/api";
 import { categoryMeta, categoryOptions } from "@/lib/categories";
@@ -27,6 +28,11 @@ const locations: { id: LocationName; label: string }[] = [
   { id: "freezer", label: "Freezer" },
   { id: "pantry", label: "Pantry" },
 ];
+
+const categorySelectOptions = categoryOptions.map((option) => ({
+  value: option.id,
+  label: option.label,
+}));
 
 const units = ["each", "g", "kg", "ml", "L", "oz", "lb", "cup"];
 
@@ -133,28 +139,19 @@ function FilterChip({
 
 function CategorySelect({
   value,
-  disabled,
   onChange,
   ...props
 }: {
   value: ItemCategory;
-  disabled?: boolean;
   onChange: (value: ItemCategory) => void;
-} & Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange">) {
+} & Omit<ComponentProps<typeof Select>, "value" | "onChange" | "options">) {
   return (
-    <select
+    <Select
       {...props}
-      className={cn("min-h-11 w-full px-3", controlSurfaceClassName)}
       value={value}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.value as ItemCategory)}
-    >
-      {categoryOptions.map((option) => (
-        <option key={option.id} value={option.id}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+      onChange={(next) => onChange(next as ItemCategory)}
+      options={categorySelectOptions}
+    />
   );
 }
 
@@ -597,15 +594,11 @@ export function FridgePage() {
             <Input inputMode="decimal" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
           </Field>
           <Field id="item-unit" label="Unit">
-            <select
-              className={cn("min-h-11 w-full px-3", controlSurfaceClassName)}
+            <Select
               value={unit}
-              onChange={(event) => setUnit(event.target.value)}
-            >
-              {units.map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
+              onChange={setUnit}
+              options={units.map((option) => ({ value: option, label: option }))}
+            />
           </Field>
           <Field id="item-expiry" label="Expiry">
             <Input

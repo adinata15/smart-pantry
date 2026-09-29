@@ -16,7 +16,7 @@ import { type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
-import { controlSurfaceClassName } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { HouseholdPanel } from "@/components/household-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "./session";
@@ -110,20 +110,15 @@ export function AppShell() {
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Household</p>
               {households.length > 1 ? (
-                <label className="mt-1 block text-sm font-semibold">
-                  <span className="sr-only">Switch household</span>
-                  <select
-                    className={cn("min-h-11 max-w-full px-3 font-semibold", controlSurfaceClassName)}
+                <div className="mt-1 max-w-xs">
+                  <Select
+                    aria-label="Switch household"
+                    className="font-semibold"
                     value={household?.id ?? ""}
-                    onChange={(event) => setHouseholdId(event.target.value)}
-                  >
-                    {households.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={setHouseholdId}
+                    options={households.map((entry) => ({ value: entry.id, label: entry.name }))}
+                  />
+                </div>
               ) : (
                 <p className="truncate text-lg font-bold">{household?.name ?? "No household yet"}</p>
               )}

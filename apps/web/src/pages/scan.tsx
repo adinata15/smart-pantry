@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { controlSurfaceClassName, Input } from "@/components/ui/input";
+import { Select, type SelectOption } from "@/components/ui/select";
 import { api, withToday } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { createTesseractEngine } from "@/ocr/tesseract-engine";
@@ -12,6 +13,12 @@ import { SAMPLE_RECEIPT } from "@/sample-receipt";
 import { useSession } from "@/shell/session";
 
 const engine = createTesseractEngine();
+
+const locationOptions: SelectOption[] = [
+  { value: "refrigerator", label: "Refrigerator" },
+  { value: "freezer", label: "Freezer" },
+  { value: "pantry", label: "Pantry" },
+];
 
 export function ScanPage() {
   const { household } = useSession();
@@ -124,18 +131,16 @@ export function ScanPage() {
         <Card className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 className="font-heading text-lg font-bold">Review</h2>
-            <label className="text-sm font-semibold">
-              Location
-              <select
-                className={cn("ml-2 min-h-11 px-3", controlSurfaceClassName)}
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <label htmlFor="scan-location">Location</label>
+              <Select
+                id="scan-location"
+                className="min-w-[10rem]"
                 value={location}
-                onChange={(event) => setLocation(event.target.value as LocationName)}
-              >
-                <option value="refrigerator">Refrigerator</option>
-                <option value="freezer">Freezer</option>
-                <option value="pantry">Pantry</option>
-              </select>
-            </label>
+                onChange={(next) => setLocation(next as LocationName)}
+                options={locationOptions}
+              />
+            </div>
           </div>
           <ul className="space-y-3">
             {lines.map((line, index) => (
