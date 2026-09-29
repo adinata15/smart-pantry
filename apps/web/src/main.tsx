@@ -8,6 +8,7 @@ import { FridgePage } from "@/pages/fridge";
 import { HomePage } from "@/pages/home";
 import { InsightsPage } from "@/pages/insights";
 import { MealsPage } from "@/pages/meals";
+import { ProfilePage } from "@/pages/profile";
 import { ScanPage } from "@/pages/scan";
 import { ShopPage } from "@/pages/shop";
 import { SignInPage, SignUpPage } from "@/pages/auth";
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: "meals", element: <MealsPage /> },
       { path: "shop", element: <ShopPage /> },
       { path: "insights", element: <InsightsPage /> },
+      { path: "profile", element: <ProfilePage /> },
     ],
   },
 ]);

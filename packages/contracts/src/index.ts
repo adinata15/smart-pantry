@@ -46,6 +46,13 @@ export interface SignInRequest {
   password: string;
 }
 
+export interface UpdateProfileRequest {
+  displayName?: string;
+  email?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
 export interface HouseholdSummary {
   id: string;
   name: string;

@@ -73,8 +73,22 @@ export function createPorts(prisma: PrismaClient) {
       if (!user) return null;
       return { id: user.id, email: user.email, displayName: user.displayName };
     },
+    async findUserCredentials(id: string) {
+      const user = await prisma.user.findUnique({ where: { id } });
+      if (!user) return null;
+      return {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        passwordHash: user.passwordHash,
+      };
+    },
     async createUser(input: { email: string; passwordHash: string; displayName: string }) {
       const user = await prisma.user.create({ data: input });
+      return { id: user.id, email: user.email, displayName: user.displayName };
+    },
+    async updateUser(id: string, input: { email?: string; displayName?: string; passwordHash?: string }) {
+      const user = await prisma.user.update({ where: { id }, data: input });
       return { id: user.id, email: user.email, displayName: user.displayName };
     },
     async createSession(userId: string, tokenHash: string, expiresAt: Date) {

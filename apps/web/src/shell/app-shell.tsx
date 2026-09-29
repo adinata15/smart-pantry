@@ -8,9 +8,11 @@ import {
   Scan,
   ShoppingCart,
   SignOut,
+  User,
 } from "@phosphor-icons/react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
@@ -28,7 +30,11 @@ const primaryNav: { to: string; label: string; icon: Icon }[] = [
   { to: "/shop", label: "Shop", icon: ShoppingCart },
 ];
 
-const allNav = [...primaryNav, { to: "/insights", label: "Insights", icon: ChartBar }];
+const allNav = [
+  ...primaryNav,
+  { to: "/insights", label: "Insights", icon: ChartBar },
+  { to: "/profile", label: "Profile", icon: User },
+];
 
 function NavItem({ to, label, icon: IconMark, compact }: { to: string; label: string; icon: Icon; compact?: boolean }) {
   return (
@@ -53,8 +59,10 @@ function NavItem({ to, label, icon: IconMark, compact }: { to: string; label: st
 
 export function AppShell() {
   const { user, households, household, setHouseholdId } = useSession();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isProfile = location.pathname === "/profile";
   const signOut = useMutation({
     mutationFn: () => api("/v1/auth/sign-out", { method: "POST" }),
     onSuccess: async () => {
@@ -62,6 +70,20 @@ export function AppShell() {
       navigate("/sign-in");
     },
   });
+
+  let main: ReactNode;
+  if (isProfile) {
+    main = <Outlet />;
+  } else if (household) {
+    main = (
+      <div className="space-y-6">
+        <Outlet />
+        <HouseholdPanel />
+      </div>
+    );
+  } else {
+    main = <SetupHousehold />;
+  }
 
   return (
     <div className="relative min-h-screen text-foreground">
@@ -110,7 +132,17 @@ export function AppShell() {
               <div className="md:hidden">
                 <NavItem to="/insights" label="Insights" icon={ChartBar} />
               </div>
-              <span className="hidden text-sm text-muted-foreground sm:inline">{user.displayName}</span>
+              <Link
+                to="/profile"
+                className="hidden min-h-11 items-center rounded-2xl px-2 text-sm font-semibold text-muted-foreground transition-colors duration-200 hover:bg-highlight/60 hover:text-foreground sm:inline-flex"
+              >
+                {user.displayName}
+              </Link>
+              <Button variant="ghost" asChild>
+                <Link to="/profile" aria-label="Profile">
+                  <User aria-hidden="true" className="size-5" weight="regular" />
+                </Link>
+              </Button>
               <ThemeToggle />
               <Button variant="ghost" type="button" onClick={() => signOut.mutate()}>
                 <SignOut aria-hidden="true" className="size-4" weight="regular" />
@@ -124,14 +156,7 @@ export function AppShell() {
           className="mx-auto max-w-6xl scroll-mt-[var(--header-offset)] px-4 py-6 pb-28 md:px-8 md:pb-10"
           style={{ scrollPaddingTop: "var(--header-offset)", scrollPaddingBottom: "var(--bottom-nav-offset)" }}
         >
-          {household ? (
-            <div className="space-y-6">
-              <Outlet />
-              <HouseholdPanel />
-            </div>
-          ) : (
-            <SetupHousehold />
-          )}
+          {main}
         </main>
       </div>
       <nav

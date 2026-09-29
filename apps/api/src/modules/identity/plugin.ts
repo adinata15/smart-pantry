@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from "../../infra/password";
 import { hashToken, newSessionToken } from "../../infra/tokens";
 import { SESSION_COOKIE, sessionCookieOptions } from "../../http/cookies";
 import { readBody, requireUser } from "../../http/parse";
+import { updateProfile } from "./update-profile";
 
 const signUpSchema = z.object({
   email: z.string().email("Enter an email address."),
@@ -16,6 +17,13 @@ const signUpSchema = z.object({
 const signInSchema = z.object({
   email: z.string().email("Enter an email address."),
   password: z.string().min(1, "Enter your password."),
+});
+
+const updateProfileSchema = z.object({
+  displayName: z.string().trim().min(1, "Enter your name.").max(80).optional(),
+  email: z.string().email("Enter an email address.").optional(),
+  currentPassword: z.string().min(1, "Enter your current password.").optional(),
+  newPassword: z.string().min(8, "Use at least 8 characters.").optional(),
 });
 
 function expiry() {
@@ -77,6 +85,12 @@ export function identityPlugin(ports: AppPorts): FastifyPluginAsync {
 
     app.get("/auth/me", async (request) => {
       return { user: requireUser(request) };
+    });
+
+    app.patch("/auth/me", async (request) => {
+      const user = requireUser(request);
+      const body = readBody(updateProfileSchema, request.body);
+      return { user: await updateProfile(ports, user.id, body) };
     });
   };
 }
