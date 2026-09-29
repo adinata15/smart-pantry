@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { controlSurfaceClassName, Input } from "@/components/ui/input";
 import { ErrorSummary, Field, focusSummary, messageFor, type FieldError } from "@/components/field";
 import { ApiError, api, formatDay, withToday } from "@/lib/api";
+import { dmyToIso, maskDmy } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/shell/session";
 
@@ -51,7 +52,7 @@ export function FridgePage() {
   }
 
   const add = useMutation({
-    mutationFn: () =>
+    mutationFn: (expiryDate: string | null) =>
       api(withToday(`/v1/households/${household!.id}/items`), {
         method: "POST",
         body: JSON.stringify({
@@ -59,7 +60,7 @@ export function FridgePage() {
           unit,
           quantity: Number(quantity),
           location,
-          expiryDate: expiry || null,
+          expiryDate,
           parLevel: par ? Number(par) : null,
         }),
       }),
@@ -102,13 +103,17 @@ export function FridgePage() {
   function onAdd(event: FormEvent) {
     event.preventDefault();
     const next: FieldError[] = name.trim() ? [] : [{ id: "item-name", message: "Enter an item name." }];
+    const expiryDate = expiry.trim() ? dmyToIso(expiry) : null;
+    if (expiry.trim() && !expiryDate) {
+      next.push({ id: "item-expiry", message: "Enter the expiry as dd/mm/yyyy." });
+    }
     setErrors(next);
     setFormError("");
     if (next.length) {
       focusSummary(summary);
       return;
     }
-    add.mutate();
+    add.mutate(expiryDate);
   }
 
   const list = items.data?.items ?? [];
@@ -162,7 +167,14 @@ export function FridgePage() {
             </select>
           </Field>
           <Field id="item-expiry" label="Expiry">
-            <Input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} />
+            <Input
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="dd/mm/yyyy"
+              maxLength={10}
+              value={expiry}
+              onChange={(event) => setExpiry(maskDmy(event.target.value))}
+            />
           </Field>
           <Field id="item-par" label="Par level">
             <Input inputMode="decimal" value={par} placeholder="Optional" onChange={(event) => setPar(event.target.value)} />

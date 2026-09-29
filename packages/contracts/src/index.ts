@@ -194,3 +194,19 @@ export interface ApiErrorBody {
     message: string;
   };
 }
+
+export type CodexConnectStatus = "starting" | "awaiting" | "connected" | "failed";
+
+export interface CodexLoginStatus {
+  connected: boolean;
+  configured: boolean;
+  connectedAt: string | null;
+}
+
+export interface CodexConnectSession {
+  sessionId: string;
+  status: CodexConnectStatus;
+  verificationUrl: string | null;
+  userCode: string | null;
+  error: string | null;
+}

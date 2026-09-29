@@ -8,5 +8,7 @@ describe("persistence boundary", () => {
     expect(schema).not.toContain("openai");
     expect(schema).not.toContain("api_key");
     expect(schema).not.toContain("apikey");
+    expect(schema).toContain("memberlogin");
+    expect(schema).toContain("sealedhome");
   });
 });

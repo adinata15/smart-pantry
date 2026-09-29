@@ -38,9 +38,7 @@ export function withToday(path: string): string {
 }
 
 export function formatDay(iso: string): string {
-  const [year, month, day] = iso.split("-").map(Number);
-  return new Date(year!, (month ?? 1) - 1, day ?? 1).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  const [year, month, day] = iso.split("-");
+  if (!year || !month || !day) return iso;
+  return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
 }

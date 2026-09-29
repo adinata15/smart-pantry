@@ -1,4 +1,4 @@
-const SECRET_ENV = ["OPENAI_API_KEY", "DATABASE_URL"];
+const SECRET_ENV = ["OPENAI_API_KEY", "DATABASE_URL", "CODEX_LOGIN_KEY"];
 
 export function redactValue<T>(value: T): T {
   const secrets = SECRET_ENV.map((name) => process.env[name]).filter(

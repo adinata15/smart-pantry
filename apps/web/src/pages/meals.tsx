@@ -1,6 +1,8 @@
 import type { MealsResponse } from "@smart-pantry/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { AgentFetchStatus } from "@/components/agent-fetch-status";
+import { CodexLoginPanel } from "@/components/codex-login-panel";
 import { Card } from "@/components/ui/card";
 import { api, withToday } from "@/lib/api";
 import { useSession } from "@/shell/session";
@@ -23,14 +25,22 @@ export function MealsPage() {
           Nutrition figures come from the catalog. They are estimates, not medical advice.
         </p>
       </div>
-      {meals.isLoading ? <p className="text-muted-foreground">Finding meals…</p> : null}
+      <CodexLoginPanel />
+      {meals.isLoading ? (
+        <AgentFetchStatus
+          title="Fetching meal ideas from the AI agent."
+          detail="This can take a moment while Codex reads your stock and matches recipes."
+        />
+      ) : null}
       {meals.isError ? <p role="alert">Could not load meal ideas.</p> : null}
       {meals.data ? (
         <p className="text-sm font-semibold">
-          {meals.data.source === "model" ? "These meals came from the model." : "These meals came from the built-in matcher."}
+          {meals.data.source === "model"
+            ? "These meals came from the model."
+            : "These meals came from the built-in matcher."}
         </p>
       ) : null}
-      {!meals.isLoading && meals.data && list.length === 0 ? (
+      {meals.data && list.length === 0 ? (
         <Card className="space-y-2">
           <p className="text-sm text-muted-foreground">No meal ideas yet for this stock.</p>
           <p className="text-sm">

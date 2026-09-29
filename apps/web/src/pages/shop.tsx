@@ -1,5 +1,7 @@
 import type { ShoppingReason, ShoppingResponse } from "@smart-pantry/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AgentFetchStatus } from "@/components/agent-fetch-status";
+import { CodexLoginPanel } from "@/components/codex-login-panel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api, withToday } from "@/lib/api";
@@ -12,6 +14,14 @@ const labels: Record<ShoppingReason, string> = {
 };
 
 const order: ShoppingReason[] = ["below-par", "favorite-running-low", "missing-ingredient"];
+
+function shoppingIntro(data: ShoppingResponse | undefined): string {
+  if (!data) return "Par, favorites, and near-match meals feed this list.";
+  if (data.source === "model") {
+    return "Reasons can come from the model. Quantities come from par, favorites, and the catalog.";
+  }
+  return "This list came from the built-in matcher.";
+}
 
 export function ShopPage() {
   const { household } = useSession();
@@ -40,16 +50,17 @@ export function ShopPage() {
     <div className="space-y-6" aria-busy={shopping.isLoading}>
       <div>
         <h1 className="font-heading text-2xl font-bold">Shop</h1>
-        <p className="text-sm text-muted-foreground">
-          {shopping.data?.source === "model"
-            ? "Reasons can come from the model. Quantities come from par, favorites, and the catalog."
-            : shopping.isLoading
-              ? "Building the list…"
-              : "This list came from the built-in matcher."}
-        </p>
+        <p className="text-sm text-muted-foreground">{shoppingIntro(shopping.data)}</p>
       </div>
+      <CodexLoginPanel />
+      {shopping.isLoading ? (
+        <AgentFetchStatus
+          title="Fetching the shopping list from the AI agent."
+          detail="This can take a moment while Codex checks par, favorites, and near-match meals."
+        />
+      ) : null}
       {shopping.isError ? <p role="alert">Could not load the shopping list.</p> : null}
-      {shopping.data && shopping.data.needs.length === 0 ? (
+      {shopping.data?.needs.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nothing to buy right now.</p>
       ) : null}
       {order.map((reason) => {

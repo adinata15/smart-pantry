@@ -15,6 +15,7 @@ import { intakePlugin } from "./modules/intake/plugin";
 import { inventoryPlugin } from "./modules/inventory/plugin";
 import { createRecommendationModel } from "./modules/recommendations/openai-adapter";
 import { recommendationsPlugin } from "./modules/recommendations/plugin";
+import { codexLoginPlugin, createCodexLoginService } from "./modules/recommendations/codex-login-plugin";
 
 export async function buildApp() {
   const app = Fastify({
@@ -56,7 +57,8 @@ export async function buildApp() {
   app.get("/v1/health", async () => ({ ok: true }));
 
   const ports = createPorts(prisma);
-  const model = createRecommendationModel();
+  const processModel = createRecommendationModel();
+  const codexLogin = createCodexLoginService(ports);
 
   await app.register(
     async (api) => {
@@ -75,7 +77,8 @@ export async function buildApp() {
       await api.register(consumptionPlugin(ports));
       await api.register(intakePlugin(ports));
       await api.register(catalogPlugin());
-      await api.register(recommendationsPlugin(ports, model));
+      await api.register(codexLoginPlugin(ports, codexLogin));
+      await api.register(recommendationsPlugin(ports, processModel));
     },
     { prefix: "/v1" },
   );

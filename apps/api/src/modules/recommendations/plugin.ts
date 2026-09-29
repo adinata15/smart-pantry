@@ -7,6 +7,7 @@ import { assertMembership } from "../household/access";
 import { isExpiringSoon, toPantryItem } from "../inventory/freshness";
 import { RECIPES } from "../catalog/recipes";
 import { buildAdvice, type RecommendationModel } from "./advise";
+import { resolveRecommendationModel } from "./resolve-model";
 import { stockFingerprint } from "./shopping";
 
 const dismissSchema = z.object({
@@ -15,7 +16,7 @@ const dismissSchema = z.object({
 
 async function loadAdvice(
   ports: AppPorts,
-  model: RecommendationModel | null,
+  processModel: RecommendationModel | null,
   userId: string,
   householdId: string,
   query: unknown,
@@ -23,11 +24,12 @@ async function loadAdvice(
   assertMembership(await ports.membership(userId, householdId));
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 30);
-  const [items, useCounts, dismissals, householdName] = await Promise.all([
+  const [items, useCounts, dismissals, householdName, model] = await Promise.all([
     ports.listItems(householdId),
     ports.useCounts(householdId, since),
     ports.listDismissals(householdId),
     ports.householdName(householdId),
+    resolveRecommendationModel(ports, userId, processModel),
   ]);
   const advice = await buildAdvice({
     items,
@@ -48,12 +50,15 @@ async function loadAdvice(
   };
 }
 
-export function recommendationsPlugin(ports: AppPorts, model: RecommendationModel | null): FastifyPluginAsync {
+export function recommendationsPlugin(
+  ports: AppPorts,
+  processModel: RecommendationModel | null,
+): FastifyPluginAsync {
   return async (app) => {
     app.get("/households/:householdId/meals", async (request) => {
       const user = requireUser(request);
       const { householdId } = request.params as { householdId: string };
-      const { advice } = await loadAdvice(ports, model, user.id, householdId, request.query);
+      const { advice } = await loadAdvice(ports, processModel, user.id, householdId, request.query);
       return { source: advice.source, meals: advice.meals };
     });
 
@@ -61,7 +66,7 @@ export function recommendationsPlugin(ports: AppPorts, model: RecommendationMode
       const user = requireUser(request);
       const { householdId } = request.params as { householdId: string };
       const query = { ...(request.query as object), locations: "all" };
-      const { advice } = await loadAdvice(ports, model, user.id, householdId, query);
+      const { advice } = await loadAdvice(ports, processModel, user.id, householdId, query);
       return { source: advice.source, needs: advice.shopping };
     });
 
@@ -81,7 +86,7 @@ export function recommendationsPlugin(ports: AppPorts, model: RecommendationMode
       const today = readToday(request.query);
       const { items, advice, householdName } = await loadAdvice(
         ports,
-        model,
+        processModel,
         user.id,
         householdId,
         request.query,

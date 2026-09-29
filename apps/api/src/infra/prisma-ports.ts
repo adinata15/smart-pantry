@@ -311,6 +311,19 @@ export function createPorts(prisma: PrismaClient) {
         return committed;
       });
     },
+    async findMemberLogin(userId: string) {
+      return prisma.memberLogin.findUnique({ where: { userId } });
+    },
+    async upsertMemberLogin(userId: string, sealedHome: string) {
+      return prisma.memberLogin.upsert({
+        where: { userId },
+        create: { userId, sealedHome },
+        update: { sealedHome, connectedAt: new Date() },
+      });
+    },
+    async deleteMemberLogin(userId: string) {
+      await prisma.memberLogin.deleteMany({ where: { userId } });
+    },
   };
 }
 

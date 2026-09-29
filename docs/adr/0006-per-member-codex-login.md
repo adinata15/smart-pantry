@@ -1,0 +1,5 @@
+# Each member may connect their own ChatGPT Codex sign-in
+
+A ChatGPT subscription is not an OpenAI platform API key. The member starts Codex login on the API host (`codex login`). The browser opens the ChatGPT OAuth URL; the CLI receives the callback on 127.0.0.1:1455 on that same host. When login finishes, the API seals the Codex home for that member and never returns it. Meal and shopping advice prefer that login for the asking member, then the process `OPENAI_API_KEY`, then the deterministic matcher. A pasted key stays rejected. Device-code login (`/codex/device`) is not used: OpenAI's device page has failed with HTML where JSON was expected.
+
+Considered options: keep subscription login out of the product (ADR 0005), share one Codex login for the whole process, or device-code auth for a remote API. A shared login would spend one person's plan for every household. Device auth does not complete reliably after ChatGPT sign-in. OAuth with a localhost callback requires the API and the member's browser to share localhost (typical for running the API on the host).
