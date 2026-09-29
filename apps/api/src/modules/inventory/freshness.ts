@@ -1,4 +1,4 @@
-import type { Freshness, PantryItem } from "@smart-pantry/contracts";
+import type { Freshness, ItemCategory, PantryItem } from "@smart-pantry/contracts";
 import { addDays } from "../catalog/dates";
 import type { LotDraft } from "./fifo";
 
@@ -7,6 +7,7 @@ export interface ItemDraft {
   householdId: string;
   name: string;
   unit: string;
+  category: ItemCategory;
   parLevel: number | null;
   pinned: boolean;
   lots: LotDraft[];
@@ -37,6 +38,7 @@ export function toPantryItem(item: ItemDraft, today: string): PantryItem {
     id: item.id,
     name: item.name,
     unit: item.unit,
+    category: item.category,
     parLevel: item.parLevel,
     pinned: item.pinned,
     lots: item.lots,

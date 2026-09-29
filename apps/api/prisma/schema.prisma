@@ -64,6 +64,7 @@ model Item {
   householdId String
   name        String
   unit        String
+  category    String     @default("other")
   parLevel    Float?
   pinned      Boolean    @default(false)
   createdAt   DateTime   @default(now())

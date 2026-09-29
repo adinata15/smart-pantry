@@ -25,6 +25,7 @@ function recipe(ingredients: Recipe["ingredients"]): Recipe {
 function item(partial: Partial<ItemDraft> & Pick<ItemDraft, "id" | "name" | "unit" | "lots">): ItemDraft {
   return {
     householdId: "house-a",
+    category: "other",
     parLevel: null,
     pinned: false,
     ...partial,

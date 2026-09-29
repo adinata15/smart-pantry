@@ -2,8 +2,32 @@ export type LocationName = "refrigerator" | "freezer" | "pantry";
 export type Role = "owner" | "member";
 export type MealType = "breakfast" | "lunch" | "dinner";
 export type Freshness = "fresh" | "expiring" | "expired" | "unknown";
+export type ItemCategory =
+  | "vegetable"
+  | "fruits"
+  | "dairy"
+  | "meat"
+  | "bakery"
+  | "drinks"
+  | "condiments"
+  | "leftovers"
+  | "dry-goods"
+  | "other";
 export type ShoppingReason = "below-par" | "favorite-running-low" | "missing-ingredient";
 export type AdviceSource = "model" | "matcher";
+
+export const ITEM_CATEGORIES: ItemCategory[] = [
+  "vegetable",
+  "fruits",
+  "dairy",
+  "meat",
+  "bakery",
+  "drinks",
+  "condiments",
+  "leftovers",
+  "dry-goods",
+  "other",
+];
 
 export interface PublicUser {
   id: string;
@@ -48,6 +72,7 @@ export interface PantryItem {
   id: string;
   name: string;
   unit: string;
+  category: ItemCategory;
   parLevel: number | null;
   pinned: boolean;
   lots: StockLot[];
@@ -63,11 +88,13 @@ export interface CreateItemRequest {
   location: LocationName;
   expiryDate: string | null;
   parLevel: number | null;
+  category: ItemCategory;
 }
 
 export interface UpdateItemRequest {
   name?: string;
   unit?: string;
+  category?: ItemCategory;
   parLevel?: number | null;
   pinned?: boolean;
 }

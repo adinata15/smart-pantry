@@ -23,6 +23,7 @@ function stubPorts(partial: Pick<InventoryPorts, "membership" | "listItems">): I
 function draft(partial: Pick<ItemDraft, "id" | "householdId" | "name">): ItemDraft {
   return {
     unit: "each",
+    category: "other",
     parLevel: null,
     pinned: false,
     lots: [],

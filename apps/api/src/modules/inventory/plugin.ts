@@ -1,3 +1,5 @@
+import type { ItemCategory } from "@smart-pantry/contracts";
+import { ITEM_CATEGORIES } from "@smart-pantry/contracts";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import type { AppPorts } from "../../infra/prisma-ports";
@@ -7,6 +9,7 @@ import { toPantryItem } from "./freshness";
 import { addLotToItem, addStock, editItem, editLot, readHouseholdItems } from "./use-cases";
 
 const location = z.enum(["refrigerator", "freezer", "pantry"]);
+const category = z.enum(ITEM_CATEGORIES as [ItemCategory, ...ItemCategory[]]);
 const expiry = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a YYYY-MM-DD date."), z.null()]);
 
 const createSchema = z.object({
@@ -16,11 +19,13 @@ const createSchema = z.object({
   location,
   expiryDate: expiry,
   parLevel: z.number().positive().nullable(),
+  category,
 });
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   unit: z.string().trim().min(1).max(20).optional(),
+  category: category.optional(),
   parLevel: z.number().positive().nullable().optional(),
   pinned: z.boolean().optional(),
 });

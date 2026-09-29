@@ -40,8 +40,11 @@ export async function addStock(ports: InventoryPorts, userId: string, householdI
   const items = await ports.listItems(householdId);
   const existing = items.find((item) => canonicalName(item.name) === canonicalName(input.name));
   if (existing) {
-    if (input.parLevel != null && existing.parLevel == null) {
-      await ports.updateItem(householdId, existing.id, { parLevel: input.parLevel });
+    const patch: { parLevel?: number | null; category?: CreateItemRequest["category"] } = {};
+    if (input.parLevel != null && existing.parLevel == null) patch.parLevel = input.parLevel;
+    if (input.category !== existing.category) patch.category = input.category;
+    if (Object.keys(patch).length > 0) {
+      await ports.updateItem(householdId, existing.id, patch);
     }
     return ports.addLot(householdId, existing.id, {
       quantity: input.quantity,

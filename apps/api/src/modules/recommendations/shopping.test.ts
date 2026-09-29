@@ -24,6 +24,7 @@ function item(partial: Partial<ItemDraft> & Pick<ItemDraft, "id" | "name">): Ite
   return {
     householdId: "house-a",
     unit: "each",
+    category: "other",
     parLevel: null,
     pinned: false,
     lots: [{ id: `${partial.id}-lot`, location: "refrigerator", quantity: 1, expiryDate: null }],

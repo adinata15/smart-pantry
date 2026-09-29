@@ -3,11 +3,13 @@ import type {
   AddLotRequest,
   CreateItemRequest,
   HouseholdSummary,
+  ItemCategory,
   LocationName,
   Role,
   UpdateItemRequest,
   UpdateLotRequest,
 } from "@smart-pantry/contracts";
+import { ITEM_CATEGORIES } from "@smart-pantry/contracts";
 import { HttpError } from "./errors";
 import { canonicalName } from "../modules/catalog/aliases";
 import { assertMembership } from "../modules/household/access";
@@ -20,6 +22,11 @@ type ItemWithLots = Prisma.ItemGetPayload<{ include: { lots: true } }>;
 function asLocation(value: string): LocationName {
   if (value === "freezer" || value === "pantry" || value === "refrigerator") return value;
   return "refrigerator";
+}
+
+function asCategory(value: string): ItemCategory {
+  if (value === "produce") return "vegetable";
+  return (ITEM_CATEGORIES as string[]).includes(value) ? (value as ItemCategory) : "other";
 }
 
 function asRole(value: string): Role {
@@ -42,6 +49,7 @@ function mapItem(item: ItemWithLots): ItemDraft {
     householdId: item.householdId,
     name: item.name,
     unit: item.unit,
+    category: asCategory(item.category),
     parLevel: item.parLevel,
     pinned: item.pinned,
     lots: item.lots.map((lot) => ({
@@ -136,6 +144,7 @@ export function createPorts(prisma: PrismaClient) {
           householdId,
           name: input.name.trim(),
           unit: input.unit.trim(),
+          category: input.category,
           parLevel: input.parLevel,
           lots: {
             create: {
@@ -157,6 +166,7 @@ export function createPorts(prisma: PrismaClient) {
         data: {
           name: input.name?.trim(),
           unit: input.unit?.trim(),
+          category: input.category,
           parLevel: input.parLevel,
           pinned: input.pinned,
         },
@@ -328,6 +338,7 @@ export function createPorts(prisma: PrismaClient) {
                   householdId,
                   name: line.name.trim(),
                   unit: line.unit.trim(),
+                  category: "other",
                   parLevel: null,
                   lots: { create: lot },
                 },

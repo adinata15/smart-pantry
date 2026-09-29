@@ -42,3 +42,8 @@ export function formatDay(iso: string): string {
   if (!year || !month || !day) return iso;
   return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
 }
+
+export function isoToDmy(iso: string | null): string {
+  return iso ? formatDay(iso) : "";
+}
+

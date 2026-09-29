@@ -56,6 +56,7 @@ describe("nutrition grounding", () => {
           householdId: "house-a",
           name: "Eggs",
           unit: "each",
+          category: "dairy",
           parLevel: 12,
           pinned: false,
           lots: [{ id: "lot", location: "refrigerator", quantity: 1, expiryDate: null }],
