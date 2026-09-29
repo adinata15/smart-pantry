@@ -41,6 +41,7 @@ model Household {
   name        String
   inviteCode  String              @unique
   createdAt   DateTime            @default(now())
+  deletedAt   DateTime?
   memberships Membership[]
   items       Item[]
   useEvents   UseEvent[]

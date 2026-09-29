@@ -13,6 +13,7 @@ import { ITEM_CATEGORIES } from "@smart-pantry/contracts";
 import { HttpError } from "./errors";
 import { canonicalName } from "../modules/catalog/aliases";
 import { assertMembership } from "../modules/household/access";
+import { decideLeave } from "../modules/household/leave";
 import type { ItemDraft } from "../modules/inventory/freshness";
 import type { LotDraft } from "../modules/inventory/fifo";
 import { roundQty } from "../modules/inventory/fifo";
@@ -117,7 +118,7 @@ export function createPorts(prisma: PrismaClient) {
     },
     async listHouseholds(userId: string): Promise<HouseholdSummary[]> {
       const memberships = await prisma.membership.findMany({
-        where: { userId },
+        where: { userId, household: { deletedAt: null } },
         include: { household: true },
         orderBy: { household: { name: "asc" } },
       });
@@ -129,7 +130,7 @@ export function createPorts(prisma: PrismaClient) {
       }));
     },
     async findHouseholdByInvite(inviteCode: string) {
-      return prisma.household.findUnique({ where: { inviteCode } });
+      return prisma.household.findFirst({ where: { inviteCode, deletedAt: null } });
     },
     async membership(userId: string, householdId: string) {
       const membership = await prisma.membership.findUnique({
@@ -140,8 +141,90 @@ export function createPorts(prisma: PrismaClient) {
     async addMember(householdId: string, userId: string) {
       await prisma.membership.create({ data: { householdId, userId, role: "member" } });
     },
+    async listMembers(householdId: string) {
+      const memberships = await prisma.membership.findMany({
+        where: { householdId, household: { deletedAt: null } },
+        include: { user: { select: { id: true, displayName: true } } },
+        orderBy: { user: { displayName: "asc" } },
+      });
+      return memberships.map((membership) => ({
+        userId: membership.user.id,
+        displayName: membership.user.displayName,
+        role: asRole(membership.role),
+      }));
+    },
+    async switchHousehold(input: {
+      userId: string;
+      fromHouseholdId: string;
+      inviteCode: string;
+      successorUserId?: string;
+    }): Promise<HouseholdSummary> {
+      return prisma.$transaction(async (tx) => {
+        const from = await tx.household.findFirst({
+          where: { id: input.fromHouseholdId, deletedAt: null },
+          include: { memberships: true },
+        });
+        if (!from) throw new HttpError(404, "not_found", "That household was not found.");
+
+        const leaver = from.memberships.find((row) => row.userId === input.userId);
+        if (!leaver) throw new HttpError(403, "forbidden", "You are not a member of this household.");
+
+        const target = await tx.household.findFirst({
+          where: { inviteCode: input.inviteCode, deletedAt: null },
+        });
+        if (!target) throw new HttpError(404, "not_found", "That invite code does not match a household.");
+        if (target.id === from.id) {
+          throw new HttpError(400, "bad_request", "You are already in that household.");
+        }
+
+        const decision = decideLeave({
+          role: asRole(leaver.role),
+          memberUserIds: from.memberships.map((row) => row.userId),
+          leaverUserId: input.userId,
+          successorUserId: input.successorUserId,
+        });
+
+        if (decision.kind === "promote_then_leave") {
+          await tx.membership.update({
+            where: {
+              householdId_userId: { householdId: from.id, userId: decision.successorUserId },
+            },
+            data: { role: "owner" },
+          });
+        }
+
+        await tx.membership.delete({
+          where: { householdId_userId: { householdId: from.id, userId: input.userId } },
+        });
+
+        const remaining = await tx.membership.count({ where: { householdId: from.id } });
+        if (remaining === 0) {
+          await tx.household.update({
+            where: { id: from.id },
+            data: { deletedAt: new Date() },
+          });
+        }
+
+        const existing = await tx.membership.findUnique({
+          where: { householdId_userId: { householdId: target.id, userId: input.userId } },
+        });
+        if (!existing) {
+          await tx.membership.create({
+            data: { householdId: target.id, userId: input.userId, role: "member" },
+          });
+        }
+
+        const membership = existing ?? { role: "member" };
+        return {
+          id: target.id,
+          name: target.name,
+          role: asRole(membership.role),
+          inviteCode: target.inviteCode,
+        };
+      });
+    },
     async householdName(householdId: string) {
-      const household = await prisma.household.findUnique({ where: { id: householdId } });
+      const household = await prisma.household.findFirst({ where: { id: householdId, deletedAt: null } });
       return household?.name ?? null;
     },
     async listItems(householdId: string) {

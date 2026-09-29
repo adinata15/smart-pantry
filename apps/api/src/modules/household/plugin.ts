@@ -4,6 +4,7 @@ import { HttpError } from "../../infra/errors";
 import type { AppPorts } from "../../infra/prisma-ports";
 import { newInviteCode } from "../../infra/tokens";
 import { readBody, requireUser } from "../../http/parse";
+import { assertMembership } from "./access";
 
 const createSchema = z.object({
   name: z.string().trim().min(1, "Enter a household name.").max(80),
@@ -11,6 +12,12 @@ const createSchema = z.object({
 
 const joinSchema = z.object({
   inviteCode: z.string().trim().min(4, "Enter an invite code.").max(16),
+});
+
+const switchSchema = z.object({
+  fromHouseholdId: z.string().trim().min(1, "Choose the household you are leaving."),
+  inviteCode: z.string().trim().min(4, "Enter an invite code.").max(16),
+  successorUserId: z.string().trim().min(1).optional(),
 });
 
 export function householdPlugin(ports: AppPorts): FastifyPluginAsync {
@@ -39,6 +46,14 @@ export function householdPlugin(ports: AppPorts): FastifyPluginAsync {
       return { households: await ports.listHouseholds(user.id) };
     });
 
+    app.get("/households/:householdId/members", async (request) => {
+      const user = requireUser(request);
+      const { householdId } = request.params as { householdId: string };
+      const membership = await ports.membership(user.id, householdId);
+      assertMembership(membership);
+      return { members: await ports.listMembers(householdId) };
+    });
+
     app.post("/households/join", async (request) => {
       const user = requireUser(request);
       const body = readBody(joinSchema, request.body);
@@ -55,6 +70,18 @@ export function householdPlugin(ports: AppPorts): FastifyPluginAsync {
           inviteCode: found.inviteCode,
         },
       };
+    });
+
+    app.post("/households/switch", async (request) => {
+      const user = requireUser(request);
+      const body = readBody(switchSchema, request.body);
+      const household = await ports.switchHousehold({
+        userId: user.id,
+        fromHouseholdId: body.fromHouseholdId,
+        inviteCode: body.inviteCode.trim().toUpperCase(),
+        successorUserId: body.successorUserId,
+      });
+      return { household };
     });
   };
 }

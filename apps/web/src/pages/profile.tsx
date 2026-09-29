@@ -1,13 +1,13 @@
 import type { PublicUser, UpdateProfileRequest } from "@smart-pantry/contracts";
-import { House, User } from "@phosphor-icons/react";
+import { User } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ErrorSummary, Field, focusSummary, messageFor, type FieldError } from "@/components/field";
+import { SwitchHouseholdForm } from "@/components/household-panel";
 import { ApiError, api } from "@/lib/api";
-import { cn } from "@/lib/cn";
 import { useSession } from "@/shell/session";
 
 function patchProfile(body: UpdateProfileRequest) {
@@ -232,53 +232,22 @@ function PasswordForm() {
 }
 
 function HouseholdCard() {
-  const { households, household, setHouseholdId } = useSession();
+  const { household } = useSession();
 
-  return (
-    <ProfileSection
-      title="Household"
-      description={
-        households.length > 1
-          ? "Choose which kitchen you are working in."
-          : "Your current kitchen for fridge, meals, and shopping."
-      }
-    >
-      {households.length === 0 ? (
-        <p className="text-sm text-muted-foreground">You are not in a household yet. Create or join one from the home screen.</p>
-      ) : (
-        <div className="space-y-2" role="group" aria-label="Switch household">
-          {households.map((entry) => {
-            const selected = household?.id === entry.id;
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setHouseholdId(entry.id)}
-                className={cn(
-                  "flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-2xl border px-4 text-left text-sm font-semibold transition-colors duration-200",
-                  selected
-                    ? "border-glass-border bg-highlight text-foreground shadow-glass-soft"
-                    : "border-transparent text-muted-foreground hover:bg-highlight/60",
-                )}
-              >
-                <House aria-hidden="true" className="size-5 shrink-0" weight="regular" />
-                <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-                <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {entry.role}
-                </span>
-              </button>
-            );
-          })}
-          {household ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              Using {household.name}.
-            </p>
-          ) : null}
-        </div>
-      )}
-    </ProfileSection>
-  );
+  if (!household) {
+    return (
+      <ProfileSection
+        title="Household"
+        description="Your current kitchen for fridge, meals, and shopping."
+      >
+        <p className="text-sm text-muted-foreground">
+          You are not in a household yet. Create or join one from the home screen.
+        </p>
+      </ProfileSection>
+    );
+  }
+
+  return <SwitchHouseholdForm title="Household" />;
 }
 
 export function ProfilePage() {

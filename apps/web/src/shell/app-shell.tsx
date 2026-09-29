@@ -16,8 +16,6 @@ import { type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { HouseholdPanel } from "@/components/household-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession } from "./session";
 import { SetupHousehold } from "@/pages/setup";
@@ -58,7 +56,7 @@ function NavItem({ to, label, icon: IconMark, compact }: { to: string; label: st
 }
 
 export function AppShell() {
-  const { user, households, household, setHouseholdId } = useSession();
+  const { user, household } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -72,15 +70,8 @@ export function AppShell() {
   });
 
   let main: ReactNode;
-  if (isProfile) {
+  if (household || isProfile) {
     main = <Outlet />;
-  } else if (household) {
-    main = (
-      <div className="space-y-6">
-        <Outlet />
-        <HouseholdPanel />
-      </div>
-    );
   } else {
     main = <SetupHousehold />;
   }
@@ -109,19 +100,7 @@ export function AppShell() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Household</p>
-              {households.length > 1 ? (
-                <div className="mt-1 max-w-xs">
-                  <Select
-                    aria-label="Switch household"
-                    className="font-semibold"
-                    value={household?.id ?? ""}
-                    onChange={setHouseholdId}
-                    options={households.map((entry) => ({ value: entry.id, label: entry.name }))}
-                  />
-                </div>
-              ) : (
-                <p className="truncate text-lg font-bold">{household?.name ?? "No household yet"}</p>
-              )}
+              <p className="truncate text-lg font-bold">{household?.name ?? "No household yet"}</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="md:hidden">

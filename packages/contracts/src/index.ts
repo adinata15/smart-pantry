@@ -68,6 +68,18 @@ export interface JoinHouseholdRequest {
   inviteCode: string;
 }
 
+export interface SwitchHouseholdRequest {
+  fromHouseholdId: string;
+  inviteCode: string;
+  successorUserId?: string;
+}
+
+export interface HouseholdMember {
+  userId: string;
+  displayName: string;
+  role: Role;
+}
+
 export interface StockLot {
   id: string;
   location: LocationName;
