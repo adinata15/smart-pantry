@@ -1,9 +1,9 @@
 import type { AddLotRequest, CreateItemRequest, LocationName, Role, UpdateItemRequest, UpdateLotRequest } from "@smart-pantry/contracts";
 import { HttpError } from "../../infra/errors";
-import { canonicalName } from "../catalog/aliases";
 import { assertMembership } from "../household/access";
 import { consumeFifo } from "./fifo";
 import type { ItemDraft } from "./freshness";
+import { planStockLine } from "./stock-plan";
 
 export interface InventoryPorts {
   membership(userId: string, householdId: string): Promise<{ role: Role } | null>;
@@ -37,22 +37,10 @@ export async function readHouseholdItems(ports: InventoryPorts, userId: string, 
 
 export async function addStock(ports: InventoryPorts, userId: string, householdId: string, input: CreateItemRequest) {
   await gate(ports, userId, householdId);
-  const items = await ports.listItems(householdId);
-  const existing = items.find((item) => canonicalName(item.name) === canonicalName(input.name));
-  if (existing) {
-    const patch: { parLevel?: number | null; category?: CreateItemRequest["category"] } = {};
-    if (input.parLevel != null && existing.parLevel == null) patch.parLevel = input.parLevel;
-    if (input.category !== existing.category) patch.category = input.category;
-    if (Object.keys(patch).length > 0) {
-      await ports.updateItem(householdId, existing.id, patch);
-    }
-    return ports.addLot(householdId, existing.id, {
-      quantity: input.quantity,
-      location: input.location,
-      expiryDate: input.expiryDate,
-    });
-  }
-  return ports.createItem(householdId, input);
+  const plan = planStockLine(await ports.listItems(householdId), input, { enrich: true });
+  if (plan.kind === "create") return ports.createItem(householdId, plan.create);
+  if (plan.kind === "addLotAndPatch") await ports.updateItem(householdId, plan.itemId, plan.patch);
+  return ports.addLot(householdId, plan.itemId, plan.lot);
 }
 
 export async function editItem(

@@ -11,12 +11,12 @@ import type {
 } from "@smart-pantry/contracts";
 import { ITEM_CATEGORIES } from "@smart-pantry/contracts";
 import { HttpError } from "./errors";
-import { canonicalName } from "../modules/catalog/aliases";
 import { assertMembership } from "../modules/household/access";
 import { decideLeave } from "../modules/household/leave";
 import type { ItemDraft } from "../modules/inventory/freshness";
 import type { LotDraft } from "../modules/inventory/fifo";
 import { roundQty } from "../modules/inventory/fifo";
+import { planStockLine } from "../modules/inventory/stock-plan";
 
 type ItemWithLots = Prisma.ItemGetPayload<{ include: { lots: true } }>;
 
@@ -408,42 +408,61 @@ export function createPorts(prisma: PrismaClient) {
         const committed: ItemDraft[] = [];
 
         for (const line of lines) {
-          const lot = {
-            location,
-            quantity: roundQty(line.quantity),
-            expiryDate: parseDate(line.expiryDate),
-          };
-          const existing = known.find(
-            (item) => canonicalName(item.name) === canonicalName(line.name),
+          const plan = planStockLine(
+            known,
+            {
+              name: line.name,
+              unit: line.unit,
+              quantity: line.quantity,
+              location,
+              expiryDate: line.expiryDate,
+              parLevel: null,
+              category: "other",
+            },
+            { enrich: false },
           );
 
           let next: ItemDraft;
-          if (existing) {
-            await tx.stockLot.create({ data: { itemId: existing.id, ...lot } });
-            next = mapItem(
-              await tx.item.findFirstOrThrow({
-                where: { id: existing.id, householdId },
-                include: includeLots,
-              }),
-            );
-            const index = known.findIndex((item) => item.id === existing.id);
-            known[index] = next;
-          } else {
+          if (plan.kind === "create") {
             next = mapItem(
               await tx.item.create({
                 data: {
                   householdId,
-                  name: line.name.trim(),
-                  unit: line.unit.trim(),
-                  category: "other",
-                  parLevel: null,
-                  lots: { create: lot },
+                  name: plan.create.name.trim(),
+                  unit: plan.create.unit.trim(),
+                  category: plan.create.category,
+                  parLevel: plan.create.parLevel,
+                  lots: {
+                    create: {
+                      location: plan.create.location,
+                      quantity: roundQty(plan.create.quantity),
+                      expiryDate: parseDate(plan.create.expiryDate),
+                    },
+                  },
                 },
                 include: includeLots,
               }),
             );
-            known.push(next);
+          } else {
+            await tx.stockLot.create({
+              data: {
+                itemId: plan.itemId,
+                location: plan.lot.location,
+                quantity: roundQty(plan.lot.quantity),
+                expiryDate: parseDate(plan.lot.expiryDate),
+              },
+            });
+            next = mapItem(
+              await tx.item.findFirstOrThrow({
+                where: { id: plan.itemId, householdId },
+                include: includeLots,
+              }),
+            );
           }
+
+          const index = known.findIndex((item) => item.id === next.id);
+          if (index >= 0) known[index] = next;
+          else known.push(next);
           committed.push(next);
         }
         return committed;
