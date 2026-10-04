@@ -1,11 +1,9 @@
-import type { ChatTurn } from "@smart-pantry/contracts";
 import { describe, expect, it } from "vitest";
 import type { Recipe } from "../catalog/recipes";
 import type { ItemDraft } from "../inventory/freshness";
 import {
   CHAT_HISTORY_LIMIT,
   answerChat,
-  chatTurnWhere,
   sendKitchenChat,
   type ChatThreadPorts,
   type KitchenChatModel,
@@ -42,6 +40,7 @@ function spinach(): ItemDraft {
 function ask(model: KitchenChatModel | null, question = "What expires soon?") {
   return answerChat({
     question,
+    memberName: "Nata",
     items: [spinach()],
     useCounts: [],
     recipes: [omelette],
@@ -49,6 +48,14 @@ function ask(model: KitchenChatModel | null, question = "What expires soon?") {
     history: [],
     model,
   });
+}
+
+function threadPorts(): ChatThreadPorts {
+  return {
+    listItems: async () => [spinach()],
+    useCounts: async () => [],
+    listDismissals: async () => [],
+  };
 }
 
 describe("kitchen chat", () => {
@@ -108,6 +115,7 @@ describe("kitchen chat", () => {
     }));
     const result = await answerChat({
       question: "Hello",
+      memberName: "Nata",
       items: [],
       useCounts: [],
       recipes: [],
@@ -119,63 +127,60 @@ describe("kitchen chat", () => {
     expect(result.source).toBe("model");
   });
 
-  it("loads and writes turns only for the asking member", async () => {
-    type Row = ChatTurn & { householdId: string; userId: string };
-    const rows: Row[] = [];
-    let nextId = 0;
-    const ports: ChatThreadPorts = {
-      listItems: async () => [spinach()],
-      useCounts: async () => [],
-      listDismissals: async () => [],
-      async listChatTurns(householdId, userId) {
-        const where = chatTurnWhere(householdId, userId);
-        return rows
-          .filter((row) => row.householdId === where.householdId && row.userId === where.userId)
-          .map(({ id, role, body, createdAt }) => ({ id, role, body, createdAt }));
-      },
-      async appendChatTurns(input) {
-        const member: Row = {
-          id: `turn-${nextId++}`,
-          householdId: input.householdId,
-          userId: input.userId,
-          role: "member",
-          body: input.memberBody,
-          createdAt: new Date().toISOString(),
-        };
-        const pantry: Row = {
-          id: `turn-${nextId++}`,
-          householdId: input.householdId,
-          userId: input.userId,
-          role: "pantry",
-          body: input.pantryBody,
-          createdAt: new Date(Date.now() + 1).toISOString(),
-        };
-        rows.push(member, pantry);
-        return { member, pantry };
+  it("passes the member's display name and kitchen facts without an email", async () => {
+    let payload = "";
+    const model: KitchenChatModel = {
+      reply: async (input) => {
+        payload = JSON.stringify(input);
+        return { reply: "Use the spinach soon.", recipeIds: [] };
       },
     };
+    const result = await ask(model);
+    const parsed = JSON.parse(payload) as { memberName: string; facts: { stock: unknown[] } };
+    expect(parsed.memberName).toBe("Nata");
+    expect(parsed.facts.stock.length).toBeGreaterThan(0);
+    expect(payload).not.toMatch(/email/i);
+    expect(payload).not.toContain("@");
+    expect(result.source).toBe("model");
+  });
 
-    await sendKitchenChat(ports, {
-      userId: "member-a",
+  it("answers from the history it was given and does not keep a thread", async () => {
+    const seen: { memberName: string; history: string[] }[] = [];
+    const model: KitchenChatModel = {
+      reply: async (input) => {
+        seen.push({ memberName: input.memberName, history: input.history.map((turn) => turn.body) });
+        return { reply: "Use the spinach soon.", recipeIds: [] };
+      },
+    };
+    const history = Array.from({ length: CHAT_HISTORY_LIMIT + 5 }, (_, index) => ({
+      role: index % 2 === 0 ? ("member" as const) : ("pantry" as const),
+      body: `turn ${index}`,
+    }));
+    const first = await sendKitchenChat(threadPorts(), {
       householdId: "hh",
+      memberName: "Ada",
       text: "What expires soon?",
       today,
       recipes: [omelette],
-      model: null,
+      history,
+      model,
     });
-    await sendKitchenChat(ports, {
-      userId: "member-b",
+    const second = await sendKitchenChat(threadPorts(), {
       householdId: "hh",
+      memberName: "Bea",
       text: "What should we buy?",
       today,
       recipes: [omelette],
-      model: null,
+      history: [{ role: "member", body: "only bea" }],
+      model,
     });
-
-    const visible = await ports.listChatTurns("hh", "member-a");
-    expect(visible.map((turn) => turn.body)).toContain("What expires soon?");
-    expect(visible.some((turn) => turn.body.includes("What should we buy?"))).toBe(false);
-    expect(rows.filter((row) => row.userId === "member-a")).toHaveLength(2);
-    expect(rows.filter((row) => row.userId === "member-b").every((row) => row.userId === "member-b")).toBe(true);
+    expect(seen[0]?.memberName).toBe("Ada");
+    expect(seen[0]?.history).toHaveLength(CHAT_HISTORY_LIMIT);
+    expect(seen[0]?.history[0]).toBe("turn 5");
+    expect(seen[1]).toEqual({ memberName: "Bea", history: ["only bea"] });
+    expect(first.turns.map((turn) => turn.role)).toEqual(["member", "pantry"]);
+    expect(first.turns[0]?.body).toBe("What expires soon?");
+    expect(second.turns[0]?.body).toBe("What should we buy?");
+    expect(first.turns[0]?.id).not.toBe(second.turns[0]?.id);
   });
 });

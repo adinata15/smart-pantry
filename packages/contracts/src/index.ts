@@ -285,6 +285,8 @@ export interface CodexConnectSession {
 
 export type ChatRole = "member" | "pantry";
 
+export const CHAT_HISTORY_LIMIT = 20;
+
 export interface ChatTurn {
   id: string;
   role: ChatRole;
@@ -292,12 +294,14 @@ export interface ChatTurn {
   createdAt: string;
 }
 
-export interface ChatThreadResponse {
-  turns: ChatTurn[];
+export interface ChatHistoryTurn {
+  role: ChatRole;
+  body: string;
 }
 
 export interface SendChatRequest {
   text: string;
+  history?: ChatHistoryTurn[];
 }
 
 export interface SendChatResponse {

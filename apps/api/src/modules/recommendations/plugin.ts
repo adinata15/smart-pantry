@@ -7,7 +7,7 @@ import { assertMembership } from "../household/access";
 import { isExpiringSoon, toPantryItem } from "../inventory/freshness";
 import { RECIPES } from "../catalog/recipes";
 import { buildAdvice, type RecommendationModel } from "./advise";
-import { sendKitchenChat, type KitchenChatModel } from "./chat";
+import { CHAT_HISTORY_LIMIT, sendKitchenChat, type KitchenChatModel } from "./chat";
 import { resolveKitchenChatModel, resolveRecommendationModel } from "./resolve-model";
 import { stockFingerprint } from "./shopping";
 
@@ -15,8 +15,14 @@ const dismissSchema = z.object({
   key: z.string().trim().min(1).max(80),
 });
 
+const chatHistoryTurnSchema = z.object({
+  role: z.enum(["member", "pantry"]),
+  body: z.string().trim().min(1).max(8000),
+});
+
 const chatSchema = z.object({
   text: z.string().trim().min(1, "Write a message.").max(2000, "Keep the message under 2000 characters."),
+  history: z.array(chatHistoryTurnSchema).max(CHAT_HISTORY_LIMIT).default([]),
 });
 
 async function loadAdvice(
@@ -109,14 +115,6 @@ export function recommendationsPlugin(
       };
     });
 
-    app.get("/households/:householdId/chat", async (request) => {
-      const user = requireUser(request);
-      const { householdId } = request.params as { householdId: string };
-      assertMembership(await ports.membership(user.id, householdId));
-      const turns = await ports.listChatTurns(householdId, user.id);
-      return { turns };
-    });
-
     app.post("/households/:householdId/chat", async (request) => {
       const user = requireUser(request);
       const { householdId } = request.params as { householdId: string };
@@ -124,11 +122,12 @@ export function recommendationsPlugin(
       assertMembership(await ports.membership(user.id, householdId));
       const model = await resolveKitchenChatModel(ports, user.id, processChatModel);
       return sendKitchenChat(ports, {
-        userId: user.id,
         householdId,
+        memberName: user.displayName,
         text: body.text,
         today: readToday(request.query),
         recipes: RECIPES,
+        history: body.history ?? [],
         model,
       });
     });

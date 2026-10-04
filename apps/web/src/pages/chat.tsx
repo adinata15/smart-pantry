@@ -1,6 +1,7 @@
-import type { AdviceSource, ChatThreadResponse, ChatTurn, SendChatResponse } from "@smart-pantry/contracts";
+import type { AdviceSource, ChatTurn, SendChatResponse } from "@smart-pantry/contracts";
+import { CHAT_HISTORY_LIMIT } from "@smart-pantry/contracts";
 import { PaperPlaneTilt } from "@phosphor-icons/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AgentFetchStatus } from "@/components/agent-fetch-status";
 import { CodexLoginPanel } from "@/components/codex-login-panel";
@@ -15,53 +16,47 @@ const STARTERS = ["What should we cook tonight?", "What expires soon?", "What sh
 
 export function ChatPage() {
   const { household } = useSession();
-  const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const [formError, setFormError] = useState("");
   const [lastSource, setLastSource] = useState<AdviceSource | null>(null);
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
+  const [householdId, setHouseholdId] = useState(household?.id);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const thread = useQuery({
-    queryKey: ["chat", household?.id],
-    enabled: Boolean(household),
-    queryFn: () => api<ChatThreadResponse>(withToday(`/v1/households/${household!.id}/chat`)),
-  });
+  if (household?.id !== householdId) {
+    setHouseholdId(household?.id);
+    setTurns([]);
+    setText("");
+    setFormError("");
+    setLastSource(null);
+  }
 
   const send = useMutation({
-    mutationFn: (message: string) =>
+    mutationFn: (input: { text: string; history: { role: ChatTurn["role"]; body: string }[] }) =>
       api<SendChatResponse>(withToday(`/v1/households/${household!.id}/chat`), {
         method: "POST",
-        body: JSON.stringify({ text: message }),
+        body: JSON.stringify(input),
       }),
-    onMutate: async (message) => {
+    onMutate: (input) => {
       setFormError("");
       setText("");
       const pending: ChatTurn = {
         id: `pending-${Date.now()}`,
         role: "member",
-        body: message,
+        body: input.text,
         createdAt: new Date().toISOString(),
       };
-      await queryClient.cancelQueries({ queryKey: ["chat", household?.id] });
-      const previous = queryClient.getQueryData<ChatThreadResponse>(["chat", household?.id]);
-      queryClient.setQueryData<ChatThreadResponse>(["chat", household?.id], {
-        turns: [...(previous?.turns ?? []), pending],
-      });
-      return { previous };
+      setTurns((current) => [...current, pending]);
     },
     onSuccess: (result) => {
       setLastSource(result.source);
-      queryClient.setQueryData<ChatThreadResponse>(["chat", household?.id], (current) => ({
-        turns: [...(current?.turns ?? []).filter((turn) => !turn.id.startsWith("pending-")), ...result.turns],
-      }));
+      setTurns((current) => [...current.filter((turn) => !turn.id.startsWith("pending-")), ...result.turns]);
     },
-    onError: (error, _message, context) => {
-      if (context?.previous) queryClient.setQueryData(["chat", household?.id], context.previous);
+    onError: (error) => {
+      setTurns((current) => current.filter((turn) => !turn.id.startsWith("pending-")));
       setFormError(error instanceof ApiError ? error.message : "Could not send that message.");
     },
   });
-
-  const turns = thread.data?.turns ?? [];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -70,8 +65,11 @@ export function ChatPage() {
   function submit(message: string) {
     const trimmed = message.trim();
     if (!trimmed || send.isPending || !household) return;
-    setFormError("");
-    send.mutate(trimmed);
+    const history = turns
+      .filter((turn) => !turn.id.startsWith("pending-"))
+      .slice(-CHAT_HISTORY_LIMIT)
+      .map((turn) => ({ role: turn.role, body: turn.body }));
+    send.mutate({ text: trimmed, history });
   }
 
   function onSubmit(event: FormEvent) {
@@ -80,17 +78,15 @@ export function ChatPage() {
   }
 
   return (
-    <div className="space-y-6" aria-busy={thread.isLoading || send.isPending}>
+    <div className="space-y-6" aria-busy={send.isPending}>
       <div>
         <h1 className="font-heading text-2xl font-bold">Chat</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Ask what to cook, use, or buy. Replies use this household&apos;s kitchen. Nutrition figures are estimates, not
-          medical advice.
+          Ask what to cook, use, or buy. Replies use this household&apos;s kitchen. Leaving this page clears the chat.
+          Nutrition figures are estimates, not medical advice.
         </p>
       </div>
       <CodexLoginPanel />
-      {thread.isLoading ? <p className="text-muted-foreground">Loading the kitchen chat…</p> : null}
-      {thread.isError ? <p role="alert">Could not load the kitchen chat.</p> : null}
       {send.isPending ? (
         <AgentFetchStatus
           title="Asking the pantry."
@@ -110,7 +106,7 @@ export function ChatPage() {
         </p>
       ) : null}
       <section aria-label="Kitchen chat" className="flex max-h-[32rem] flex-col gap-3 overflow-y-auto">
-        {thread.data && turns.length === 0 && !send.isPending ? (
+        {turns.length === 0 && !send.isPending ? (
           <Card className="space-y-3">
             <p className="text-sm text-muted-foreground">No messages yet. Start with a question about the kitchen.</p>
             <div className="flex flex-wrap gap-2">
@@ -138,9 +134,9 @@ export function ChatPage() {
           maxLength={2000}
           placeholder="Ask about meals, expiry, or shopping"
           onChange={(event) => setText(event.target.value)}
-          disabled={!household || thread.isLoading || send.isPending}
+          disabled={!household || send.isPending}
         />
-        <Button type="submit" disabled={!household || thread.isLoading || send.isPending || text.trim().length === 0}>
+        <Button type="submit" disabled={!household || send.isPending || text.trim().length === 0}>
           <PaperPlaneTilt aria-hidden="true" className="size-4" weight="regular" />
           Send
         </Button>

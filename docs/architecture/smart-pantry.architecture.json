@@ -24,6 +24,12 @@
         "label": "Meal and shopping advice",
         "focus": ["api", "codex", "openai", "db"],
         "note": "Advice prefers the member Codex login, then OPENAI_API_KEY, then the matcher."
+      },
+      {
+        "id": "kitchen-chat",
+        "label": "Kitchen chat",
+        "focus": ["member", "web", "api", "db", "codex", "openai"],
+        "note": "This visit's turns stay in the browser. Codex, then OPENAI_API_KEY, then a local briefing. Context is not stored."
       }
     ]
   },
@@ -42,7 +48,7 @@
       "label": "Web client",
       "sublabel": "React SPA :8080",
       "brand": "react",
-      "tag": "nginx static",
+      "tag": "visit chat stays here",
       "pos": [260, 340],
       "size": [148, 64]
     },
@@ -87,7 +93,7 @@
       "id": "openai",
       "type": "external",
       "label": "OpenAI",
-      "sublabel": "RecommendationModel",
+      "sublabel": "Advice and chat fallback",
       "brand": "openai",
       "tag": "OPENAI_API_KEY",
       "pos": [1040, 340],
@@ -146,13 +152,14 @@
       "id": "api-to-db",
       "from": "api",
       "to": "db",
-      "label": "Prisma SQL"
+      "label": "Prisma SQL; no chat rows",
+      "labelDy": 56
     },
     {
       "id": "api-to-openai",
       "from": "api",
       "to": "openai",
-      "label": "optional advice and unit convert",
+      "label": "fallback advice, chat, units",
       "variant": "dashed",
       "fromSide": "top",
       "toSide": "top"
@@ -161,7 +168,7 @@
       "id": "api-to-codex",
       "from": "api",
       "to": "codex",
-      "label": "codex login; seal home",
+      "label": "login; sealed chat and advice",
       "fromSide": "bottom",
       "toSide": "top",
       "labelDy": 24
@@ -198,7 +205,7 @@
       "title": "API modules",
       "items": [
         "Plugins: identity, household, inventory, consumption, intake, catalog, codex login, recommendations",
-        "@smart-pantry/contracts keeps the /v1 wire format shared"
+        "Visit turns ride /v1; contracts keep that wire shared"
       ]
     },
     {
@@ -206,7 +213,7 @@
       "title": "Trust",
       "items": [
         "Hashed session cookie; sealed Codex homes and OPENAI_API_KEY stay in the API",
-        "Receipt text stays off the model; meal unit convert uses the process key when present"
+        "Chat context is not stored; receipt text, email, and passwords stay out"
       ]
     }
   ]

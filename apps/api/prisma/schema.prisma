@@ -17,7 +17,6 @@ model User {
   memberships  Membership[]
   useEvents    UseEvent[]
   memberLogin  MemberLogin?
-  chatTurns    ChatTurn[]
 }
 
 model MemberLogin {
@@ -47,7 +46,6 @@ model Household {
   items       Item[]
   useEvents   UseEvent[]
   dismissals  ShoppingDismissal[]
-  chatTurns   ChatTurn[]
 }
 
 model Membership {
@@ -111,17 +109,4 @@ model ShoppingDismissal {
   household        Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@unique([householdId, itemKey])
-}
-
-model ChatTurn {
-  id          String    @id @default(cuid())
-  householdId String
-  userId      String
-  role        String
-  body        String
-  createdAt   DateTime  @default(now())
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([householdId, userId, createdAt])
 }

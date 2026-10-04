@@ -159,6 +159,7 @@ export function createCodexRecommendationModel(input: {
 }
 
 function buildChatPrompt(input: {
+  memberName: string;
   facts: unknown;
   history: { role: string; body: string }[];
   message: string;

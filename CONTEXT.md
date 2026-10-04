@@ -73,8 +73,12 @@ Short guidance for one meal, based on catalog nutrition facts. Estimates, not me
 _Avoid_: Diet, diagnosis, prescription
 
 **Kitchen chat**:
-The saved conversation one member has about their household's kitchen.
+The conversation one member has during one visit to the chat page. Other members do not see it. The next visit starts empty.
 _Avoid_: Assistant, bot, support ticket
+
+**Chat context**:
+The member's display name and the kitchen facts for one reply. It exists only while that reply is being written.
+_Avoid_: Memory, prompt, profile
 
 **Chat turn**:
 One message in a kitchen chat, from the member or the pantry.

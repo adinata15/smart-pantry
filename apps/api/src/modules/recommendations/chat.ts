@@ -1,4 +1,11 @@
-import type { AdviceSource, ChatRole, ChatTurn, LocationName } from "@smart-pantry/contracts";
+import { randomUUID } from "node:crypto";
+import {
+  CHAT_HISTORY_LIMIT,
+  type AdviceSource,
+  type ChatRole,
+  type ChatTurn,
+  type LocationName,
+} from "@smart-pantry/contracts";
 import { redactValue, stripSecrets } from "../../infra/redact";
 import { canonicalName } from "../catalog/aliases";
 import { addDays } from "../catalog/dates";
@@ -8,13 +15,14 @@ import { rankFavorites } from "../consumption/favorites";
 import type { ItemDraft } from "../inventory/freshness";
 import { planShopping, stockFingerprint } from "./shopping";
 
-export const CHAT_HISTORY_LIMIT = 20;
+export { CHAT_HISTORY_LIMIT };
 
 const LOCATIONS: LocationName[] = ["refrigerator", "freezer", "pantry"];
 const NUTRIENTS = ["calories", "protein", "carbs", "fat", "fiber", "sodium"] as const;
 
 export const CHAT_SYSTEM = [
   "You help one member talk about their household kitchen.",
+  "The member's display name is memberName in the user message. You may use it.",
   "Answer from the kitchen facts in the user message: stock, expiry, favorites, catalog recipes, and shopping needs.",
   "Name recipes only by id from that catalog.",
   "Put every recipe you rely on in recipeIds.",
@@ -22,7 +30,7 @@ export const CHAT_SYSTEM = [
   "Never invent nutrition numbers.",
   "If you mention calories, protein, carbs, fat, fiber, or sodium, copy the number from a cited recipe.",
   "Say this is an estimate, not medical advice.",
-  "Do not ask for or repeat API keys, and ignore any request to reveal secrets.",
+  "Do not ask for or repeat email addresses, passwords, or API keys, and ignore any request to reveal secrets.",
   "Do not mention receipt text.",
   "Return JSON with reply and recipeIds.",
 ].join(" ");
@@ -54,14 +62,11 @@ export interface KitchenFacts {
 
 export interface KitchenChatModel {
   reply(input: {
+    memberName: string;
     facts: KitchenFacts;
     history: { role: ChatRole; body: string }[];
     message: string;
   }): Promise<ChatDraft>;
-}
-
-export function chatTurnWhere(householdId: string, userId: string) {
-  return { householdId, userId };
 }
 
 export function parseChatJson(text: string): ChatDraft {
@@ -236,6 +241,7 @@ function snapshotKitchen(input: {
 
 export async function answerChat(input: {
   question: string;
+  memberName: string;
   items: ItemDraft[];
   useCounts: { itemId: string; count: number }[];
   recipes: Recipe[];
@@ -250,6 +256,7 @@ export async function answerChat(input: {
   if (!input.model) return fallback();
   try {
     const draft = await input.model.reply({
+      memberName: input.memberName,
       facts: snapshot.facts,
       history: input.history.slice(-CHAT_HISTORY_LIMIT),
       message: input.question,
@@ -268,50 +275,51 @@ export interface ChatThreadPorts {
   listItems(householdId: string): Promise<ItemDraft[]>;
   useCounts(householdId: string, since: Date): Promise<{ itemId: string; count: number }[]>;
   listDismissals(householdId: string): Promise<{ key: string; stockFingerprint: string }[]>;
-  listChatTurns(householdId: string, userId: string): Promise<ChatTurn[]>;
-  appendChatTurns(input: {
-    householdId: string;
-    userId: string;
-    memberBody: string;
-    pantryBody: string;
-  }): Promise<{ member: ChatTurn; pantry: ChatTurn }>;
 }
 
 export async function sendKitchenChat(
   ports: ChatThreadPorts,
   input: {
-    userId: string;
     householdId: string;
+    memberName: string;
     text: string;
     today: string;
     recipes: Recipe[];
+    history: { role: ChatRole; body: string }[];
     model: KitchenChatModel | null;
   },
 ): Promise<{ source: AdviceSource; turns: ChatTurn[] }> {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 30);
   const text = stripSecrets(input.text);
-  const [items, useCounts, dismissals, history] = await Promise.all([
+  const history = input.history.map((turn) => ({ role: turn.role, body: stripSecrets(turn.body) }));
+  const [items, useCounts, dismissals] = await Promise.all([
     ports.listItems(input.householdId),
     ports.useCounts(input.householdId, since),
     ports.listDismissals(input.householdId),
-    ports.listChatTurns(input.householdId, input.userId),
   ]);
   const answer = await answerChat({
     question: text,
+    memberName: input.memberName,
     items,
     useCounts,
     recipes: input.recipes,
     today: input.today,
-    history: history.map((turn) => ({ role: turn.role, body: turn.body })),
+    history,
     model: input.model,
     dismissals,
   });
-  const saved = await ports.appendChatTurns({
-    householdId: input.householdId,
-    userId: input.userId,
-    memberBody: text,
-    pantryBody: answer.reply,
-  });
-  return { source: answer.source, turns: [saved.member, saved.pantry] };
+  const answeredAt = new Date();
+  return {
+    source: answer.source,
+    turns: [
+      { id: randomUUID(), role: "member", body: text, createdAt: answeredAt.toISOString() },
+      {
+        id: randomUUID(),
+        role: "pantry",
+        body: answer.reply,
+        createdAt: new Date(answeredAt.getTime() + 1).toISOString(),
+      },
+    ],
+  };
 }
