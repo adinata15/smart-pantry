@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { RecommendationModel } from "./advise";
+import { CHAT_SYSTEM, parseChatJson, type KitchenChatModel } from "./chat";
 import type { ModelDraft } from "./grounding";
 
 const SYSTEM = [
@@ -95,6 +96,48 @@ export function createRecommendationModel(env: NodeJS.ProcessEnv = process.env):
       const text = completion.choices[0]?.message?.content;
       if (!text) throw new Error("The recommendation model returned an empty reply.");
       return parseModelJson(text);
+    },
+  };
+}
+
+const CHAT_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    reply: { type: "string" },
+    recipeIds: { type: "array", items: { type: "string" } },
+  },
+  required: ["reply", "recipeIds"],
+} as const;
+
+export function createKitchenChatModel(env: NodeJS.ProcessEnv = process.env): KitchenChatModel | null {
+  const apiKey = env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return null;
+  const client = new OpenAI({ apiKey });
+  const model = env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  return {
+    async reply(input) {
+      const completion = await client.chat.completions.create(
+        {
+          model,
+          messages: [
+            { role: "system", content: CHAT_SYSTEM },
+            { role: "user", content: JSON.stringify(input) },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "kitchen_chat",
+              strict: true,
+              schema: CHAT_RESPONSE_SCHEMA,
+            },
+          },
+        },
+        { signal: AbortSignal.timeout(15000) },
+      );
+      const text = completion.choices[0]?.message?.content;
+      if (!text) throw new Error("The kitchen chat model returned an empty reply.");
+      return parseChatJson(text);
     },
   };
 }

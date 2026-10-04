@@ -1,4 +1,5 @@
 import type { RecommendationModel, AdviceContext } from "./advise";
+import { CHAT_SYSTEM, parseChatJson, type KitchenChatModel } from "./chat";
 import { materializeSealedHome, removeCodexHome, spawnCodex } from "./codex-home";
 import { parseModelJson } from "./openai-adapter";
 
@@ -105,6 +106,7 @@ export function extractJsonPayload(text: string): string {
           message?: { content?: string };
           meals?: unknown;
           shoppingNotes?: unknown;
+          reply?: unknown;
         }
       | undefined;
     if (!parsed || typeof parsed !== "object") continue;
@@ -114,7 +116,9 @@ export function extractJsonPayload(text: string): string {
     if (typeof parsed.message?.content === "string" && parsed.message.content.includes("{")) {
       return extractJsonPayload(parsed.message.content);
     }
-    if (parsed.meals !== undefined || parsed.shoppingNotes !== undefined) return line;
+    if (parsed.meals !== undefined || parsed.shoppingNotes !== undefined || typeof parsed.reply === "string") {
+      return line;
+    }
   }
 
   const brace = trimmed.match(/\{[\s\S]*\}/);
@@ -147,6 +151,45 @@ export function createCodexRecommendationModel(input: {
           signal: AbortSignal.timeout(timeoutMs),
         });
         return parseModelJson(extractJsonPayload(stdout));
+      } finally {
+        await removeCodexHome(homeDir);
+      }
+    },
+  };
+}
+
+function buildChatPrompt(input: {
+  facts: unknown;
+  history: { role: string; body: string }[];
+  message: string;
+}): string {
+  return [
+    CHAT_SYSTEM,
+    "Return only JSON. No markdown fences.",
+    'JSON shape: {"reply":"...","recipeIds":["..."]}',
+    `Kitchen facts and conversation (JSON):\n${JSON.stringify(input)}`,
+  ].join("\n\n");
+}
+
+export function createCodexKitchenChatModel(input: {
+  sealedHome: string;
+  runner?: CodexRunner;
+  env?: NodeJS.ProcessEnv;
+  timeoutMs?: number;
+}): KitchenChatModel {
+  const runner = input.runner ?? defaultCodexRunner(input.env);
+  const env = input.env ?? process.env;
+  const timeoutMs = input.timeoutMs ?? 90_000;
+  return {
+    async reply(context) {
+      const homeDir = await materializeSealedHome(input.sealedHome, env);
+      try {
+        const stdout = await runner({
+          homeDir,
+          prompt: buildChatPrompt(context),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        return parseChatJson(extractJsonPayload(stdout));
       } finally {
         await removeCodexHome(homeDir);
       }

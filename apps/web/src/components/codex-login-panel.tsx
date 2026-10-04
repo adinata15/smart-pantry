@@ -13,6 +13,7 @@ async function invalidateAdviceQueries(queryClient: QueryClient): Promise<void> 
     queryClient.invalidateQueries({ queryKey: ["home"] }),
     queryClient.invalidateQueries({ queryKey: ["meals"] }),
     queryClient.invalidateQueries({ queryKey: ["shopping"] }),
+    queryClient.invalidateQueries({ queryKey: ["chat"] }),
   ]);
 }
 

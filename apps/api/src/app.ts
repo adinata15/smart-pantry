@@ -13,7 +13,7 @@ import { householdPlugin } from "./modules/household/plugin";
 import { identityPlugin } from "./modules/identity/plugin";
 import { intakePlugin } from "./modules/intake/plugin";
 import { inventoryPlugin } from "./modules/inventory/plugin";
-import { createRecommendationModel } from "./modules/recommendations/openai-adapter";
+import { createKitchenChatModel, createRecommendationModel } from "./modules/recommendations/openai-adapter";
 import { recommendationsPlugin } from "./modules/recommendations/plugin";
 import { codexLoginPlugin, createCodexLoginService } from "./modules/recommendations/codex-login-plugin";
 
@@ -62,6 +62,7 @@ export async function buildApp() {
 
   const ports = createPorts(prisma);
   const processModel = createRecommendationModel();
+  const processChatModel = createKitchenChatModel();
   const codexLogin = createCodexLoginService(ports);
 
   await app.register(
@@ -82,7 +83,7 @@ export async function buildApp() {
       await api.register(intakePlugin(ports));
       await api.register(catalogPlugin());
       await api.register(codexLoginPlugin(ports, codexLogin));
-      await api.register(recommendationsPlugin(ports, processModel));
+      await api.register(recommendationsPlugin(ports, processModel, processChatModel));
     },
     { prefix: "/v1" },
   );

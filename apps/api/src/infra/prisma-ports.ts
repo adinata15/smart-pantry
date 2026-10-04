@@ -1,6 +1,8 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type {
   AddLotRequest,
+  ChatRole,
+  ChatTurn,
   CreateItemRequest,
   HouseholdSummary,
   ItemCategory,
@@ -17,6 +19,7 @@ import type { ItemDraft } from "../modules/inventory/freshness";
 import type { LotDraft } from "../modules/inventory/fifo";
 import { roundQty } from "../modules/inventory/fifo";
 import { planStockLine } from "../modules/inventory/stock-plan";
+import { chatTurnWhere } from "../modules/recommendations/chat";
 
 type ItemWithLots = Prisma.ItemGetPayload<{ include: { lots: true } }>;
 
@@ -32,6 +35,19 @@ function asCategory(value: string): ItemCategory {
 
 function asRole(value: string): Role {
   return value === "owner" ? "owner" : "member";
+}
+
+function asChatRole(value: string): ChatRole {
+  return value === "member" ? "member" : "pantry";
+}
+
+function mapChatTurn(turn: { id: string; role: string; body: string; createdAt: Date }): ChatTurn {
+  return {
+    id: turn.id,
+    role: asChatRole(turn.role),
+    body: turn.body,
+    createdAt: turn.createdAt.toISOString(),
+  };
 }
 
 function dateOnly(value: Date | null): string | null {
@@ -182,6 +198,12 @@ export function createPorts(prisma: PrismaClient) {
 
         await tx.membership.delete({
           where: { householdId_userId: { householdId: plan.householdId, userId: plan.userId } },
+        });
+
+        await tx.chatTurn.deleteMany({
+          where: plan.softDelete
+            ? { householdId: plan.householdId }
+            : chatTurnWhere(plan.householdId, plan.userId),
         });
 
         if (plan.softDelete) {
@@ -342,6 +364,43 @@ export function createPorts(prisma: PrismaClient) {
         _count: { _all: true },
       });
       return grouped.map((row) => ({ itemId: row.itemId, count: row._count._all }));
+    },
+    async listChatTurns(householdId: string, userId: string): Promise<ChatTurn[]> {
+      const rows = await prisma.chatTurn.findMany({
+        where: chatTurnWhere(householdId, userId),
+        orderBy: { createdAt: "asc" },
+      });
+      return rows.map(mapChatTurn);
+    },
+    async appendChatTurns(input: {
+      householdId: string;
+      userId: string;
+      memberBody: string;
+      pantryBody: string;
+    }): Promise<{ member: ChatTurn; pantry: ChatTurn }> {
+      const memberAt = new Date();
+      const pantryAt = new Date(memberAt.getTime() + 1);
+      const [member, pantry] = await prisma.$transaction([
+        prisma.chatTurn.create({
+          data: {
+            householdId: input.householdId,
+            userId: input.userId,
+            role: "member",
+            body: input.memberBody,
+            createdAt: memberAt,
+          },
+        }),
+        prisma.chatTurn.create({
+          data: {
+            householdId: input.householdId,
+            userId: input.userId,
+            role: "pantry",
+            body: input.pantryBody,
+            createdAt: pantryAt,
+          },
+        }),
+      ]);
+      return { member: mapChatTurn(member), pantry: mapChatTurn(pantry) };
     },
     async listDismissals(householdId: string) {
       const rows = await prisma.shoppingDismissal.findMany({ where: { householdId } });

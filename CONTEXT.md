@@ -72,6 +72,14 @@ _Avoid_: Cart line, list item
 Short guidance for one meal, based on catalog nutrition facts. Estimates, not medical advice.
 _Avoid_: Diet, diagnosis, prescription
 
+**Kitchen chat**:
+The saved conversation one member has about their household's kitchen.
+_Avoid_: Assistant, bot, support ticket
+
+**Chat turn**:
+One message in a kitchen chat, from the member or the pantry.
+_Avoid_: Prompt, bubble, user message
+
 **Receipt line**:
 A proposed item, quantity, and price read from a receipt, before a member commits it as stock.
 _Avoid_: Scan, invoice line

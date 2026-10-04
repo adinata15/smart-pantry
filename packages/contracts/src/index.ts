@@ -282,3 +282,25 @@ export interface CodexConnectSession {
   userCode: string | null;
   error: string | null;
 }
+
+export type ChatRole = "member" | "pantry";
+
+export interface ChatTurn {
+  id: string;
+  role: ChatRole;
+  body: string;
+  createdAt: string;
+}
+
+export interface ChatThreadResponse {
+  turns: ChatTurn[];
+}
+
+export interface SendChatRequest {
+  text: string;
+}
+
+export interface SendChatResponse {
+  source: AdviceSource;
+  turns: ChatTurn[];
+}

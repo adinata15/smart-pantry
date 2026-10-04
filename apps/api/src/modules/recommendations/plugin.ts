@@ -7,11 +7,16 @@ import { assertMembership } from "../household/access";
 import { isExpiringSoon, toPantryItem } from "../inventory/freshness";
 import { RECIPES } from "../catalog/recipes";
 import { buildAdvice, type RecommendationModel } from "./advise";
-import { resolveRecommendationModel } from "./resolve-model";
+import { sendKitchenChat, type KitchenChatModel } from "./chat";
+import { resolveKitchenChatModel, resolveRecommendationModel } from "./resolve-model";
 import { stockFingerprint } from "./shopping";
 
 const dismissSchema = z.object({
   key: z.string().trim().min(1).max(80),
+});
+
+const chatSchema = z.object({
+  text: z.string().trim().min(1, "Write a message.").max(2000, "Keep the message under 2000 characters."),
 });
 
 async function loadAdvice(
@@ -53,6 +58,7 @@ async function loadAdvice(
 export function recommendationsPlugin(
   ports: AppPorts,
   processModel: RecommendationModel | null,
+  processChatModel: KitchenChatModel | null,
 ): FastifyPluginAsync {
   return async (app) => {
     app.get("/households/:householdId/meals", async (request) => {
@@ -101,6 +107,30 @@ export function recommendationsPlugin(
         favorites: advice.favorites.slice(0, 3),
         source: advice.source,
       };
+    });
+
+    app.get("/households/:householdId/chat", async (request) => {
+      const user = requireUser(request);
+      const { householdId } = request.params as { householdId: string };
+      assertMembership(await ports.membership(user.id, householdId));
+      const turns = await ports.listChatTurns(householdId, user.id);
+      return { turns };
+    });
+
+    app.post("/households/:householdId/chat", async (request) => {
+      const user = requireUser(request);
+      const { householdId } = request.params as { householdId: string };
+      const body = readBody(chatSchema, request.body);
+      assertMembership(await ports.membership(user.id, householdId));
+      const model = await resolveKitchenChatModel(ports, user.id, processChatModel);
+      return sendKitchenChat(ports, {
+        userId: user.id,
+        householdId,
+        text: body.text,
+        today: readToday(request.query),
+        recipes: RECIPES,
+        model,
+      });
     });
   };
 }

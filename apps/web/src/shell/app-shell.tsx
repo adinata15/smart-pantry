@@ -1,6 +1,7 @@
 import type { Icon } from "@phosphor-icons/react";
 import {
   ChartBar,
+  ChatCircle,
   CookingPot,
   ForkKnife,
   House,
@@ -30,6 +31,7 @@ const primaryNav: { to: string; label: string; icon: Icon }[] = [
 
 const allNav = [
   ...primaryNav,
+  { to: "/chat", label: "Chat", icon: ChatCircle },
   { to: "/insights", label: "Insights", icon: ChartBar },
   { to: "/profile", label: "Profile", icon: User },
 ];
@@ -103,7 +105,8 @@ export function AppShell() {
               <p className="truncate text-lg font-bold">{household?.name ?? "No household yet"}</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="md:hidden">
+              <div className="flex md:hidden">
+                <NavItem to="/chat" label="Chat" icon={ChatCircle} />
                 <NavItem to="/insights" label="Insights" icon={ChartBar} />
               </div>
               <Link

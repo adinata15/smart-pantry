@@ -114,11 +114,15 @@ describe.skipIf(!testDatabaseUrl)("leave adapter", () => {
   it("soft-deletes the household when the last member leaves", async () => {
     const ownerId = userId();
     await withHousehold([{ id: ownerId, role: "owner" }], async (householdId) => {
+      await prisma!.chatTurn.create({
+        data: { householdId, userId: ownerId, role: "member", body: "What expires soon?" },
+      });
       await ports.applyLeave({
         userId: ownerId,
         householdId,
         softDelete: true,
       });
+      expect(await prisma!.chatTurn.count({ where: { householdId } })).toBe(0);
       const household = await prisma!.household.findUniqueOrThrow({ where: { id: householdId } });
       expect(household.deletedAt).toBeInstanceOf(Date);
       await expect(ports.loadLeaveContext({ userId: ownerId, householdId })).rejects.toMatchObject({
@@ -137,11 +141,19 @@ describe.skipIf(!testDatabaseUrl)("leave adapter", () => {
         { id: memberId, role: "member" },
       ],
       async (householdId) => {
+        await prisma!.chatTurn.createMany({
+          data: [
+            { householdId, userId: memberId, role: "member", body: "What should we buy?" },
+            { householdId, userId: ownerId, role: "member", body: "What should we cook tonight?" },
+          ],
+        });
         await ports.applyLeave({
           userId: memberId,
           householdId,
           softDelete: false,
         });
+        const turns = await prisma!.chatTurn.findMany({ where: { householdId } });
+        expect(turns.map((turn) => turn.userId)).toEqual([ownerId]);
         const memberships = await prisma!.membership.findMany({ where: { householdId } });
         expect(memberships.map((row) => ({ userId: row.userId, role: row.role }))).toEqual([
           { userId: ownerId, role: "owner" },

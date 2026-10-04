@@ -6,6 +6,7 @@ import type { PublicUser } from "@smart-pantry/contracts";
 import { api } from "@/lib/api";
 import { SignInPage, SignUpPage } from "@/pages/auth";
 import { ErrorPage } from "@/pages/error";
+import { ChatPage } from "@/pages/chat";
 import { FridgePage } from "@/pages/fridge";
 import { HomePage } from "@/pages/home";
 import { InsightsPage } from "@/pages/insights";
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
           { path: "scan", element: <ScanPage /> },
           { path: "meals", element: <MealsPage /> },
           { path: "shop", element: <ShopPage /> },
+          { path: "chat", element: <ChatPage /> },
           { path: "insights", element: <InsightsPage /> },
           { path: "profile", element: <ProfilePage /> },
         ],
